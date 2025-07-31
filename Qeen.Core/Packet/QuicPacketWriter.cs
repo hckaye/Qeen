@@ -40,152 +40,180 @@ public ref struct QuicPacketWriter
     /// Writes an Initial packet
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void WriteInitialPacket(
-        ReadOnlySpan<byte> destConnId,
-        ReadOnlySpan<byte> srcConnId,
-        uint version,
-        long packetNumber,
-        ReadOnlySpan<byte> token,
-        int payloadLength)
+public void WriteInitialPacket(
+    ReadOnlySpan<byte> destConnId,
+    ReadOnlySpan<byte> srcConnId,
+    uint version,
+    long packetNumber,
+    ReadOnlySpan<byte> token,
+    int payloadLength)
+{
+    if (destConnId.Length > ConnectionId.MaxLength || srcConnId.Length > ConnectionId.MaxLength)
+        throw new ArgumentException("Connection ID too long");
+
+    int pnLength = GetPacketNumberLength(packetNumber);
+
+    // 1: firstByte, 4: version, 1: DCID len, DCID, 1: SCID len, SCID
+    int headerLen = 1 + 4 + 1 + destConnId.Length + 1 + srcConnId.Length;
+    int tokenLenBytes = PacketProcessor.GetVariableLengthSize(token.Length);
+    int payloadLenBytes = PacketProcessor.GetVariableLengthSize(pnLength + payloadLength);
+    int totalLen = headerLen + tokenLenBytes + token.Length + payloadLenBytes;
+
+    if (_position + totalLen > _buffer.Length)
+        throw new InvalidOperationException("Buffer overflow");
+
+    var span = _buffer.Slice(_position, totalLen);
+    int offset = 0;
+
+    span[offset++] = (byte)(0x80 | 0x40 | (0x00 << 4) | ((pnLength - 1) & 0x03));
+    BinaryPrimitives.WriteUInt32BigEndian(span.Slice(offset, 4), version);
+    offset += 4;
+
+    span[offset++] = (byte)destConnId.Length;
+    destConnId.CopyTo(span.Slice(offset, destConnId.Length));
+    offset += destConnId.Length;
+
+    span[offset++] = (byte)srcConnId.Length;
+    srcConnId.CopyTo(span.Slice(offset, srcConnId.Length));
+    offset += srcConnId.Length;
+
+    PacketProcessor.EncodeVariableLength(token.Length, span.Slice(offset), out int tokenLenWritten);
+    offset += tokenLenWritten;
+    if (token.Length > 0)
     {
-        if (destConnId.Length > ConnectionId.MaxLength || srcConnId.Length > ConnectionId.MaxLength)
-            throw new ArgumentException("Connection ID too long");
-
-        // Calculate packet number length
-        int pnLength = GetPacketNumberLength(packetNumber);
-
-        // First byte: long header (1) + fixed bit (1) + Initial type (00) + reserved (00) + packet number length
-        // RFC 9000: Header Form (1) | Fixed Bit (1) | Long Packet Type (2) | Type-Specific Bits (2) | Packet Number Length (2)
-        byte firstByte = (byte)(0x80 | 0x40 | (0x00 << 4) | ((pnLength - 1) & 0x03));
-        WriteByte(firstByte);
-
-        // Version
-        WriteUInt32(version);
-
-        // Destination Connection ID
-        WriteByte((byte)destConnId.Length);
-        WriteBytes(destConnId);
-
-        // Source Connection ID
-        WriteByte((byte)srcConnId.Length);
-        WriteBytes(srcConnId);
-
-        // Token
-        WriteVariableLength(token.Length);
-        if (token.Length > 0)
-        {
-            WriteBytes(token);
-        }
-
-        // Length (includes packet number and payload)
-        WriteVariableLength(pnLength + payloadLength);
-
-        // Mark where packet number will be written
-        // The actual packet number will be written after header protection
+        token.CopyTo(span.Slice(offset, token.Length));
+        offset += token.Length;
     }
+
+    PacketProcessor.EncodeVariableLength(pnLength + payloadLength, span.Slice(offset), out int payloadLenWritten);
+    offset += payloadLenWritten;
+
+    _position += totalLen;
+    // Mark where packet number will be written
+    // The actual packet number will be written after header protection
+}
 
     /// <summary>
     /// Writes a Handshake packet
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void WriteHandshakePacket(
-        ReadOnlySpan<byte> destConnId,
-        ReadOnlySpan<byte> srcConnId,
-        uint version,
-        long packetNumber,
-        int payloadLength)
-    {
-        if (destConnId.Length > ConnectionId.MaxLength || srcConnId.Length > ConnectionId.MaxLength)
-            throw new ArgumentException("Connection ID too long");
+public void WriteHandshakePacket(
+    ReadOnlySpan<byte> destConnId,
+    ReadOnlySpan<byte> srcConnId,
+    uint version,
+    long packetNumber,
+    int payloadLength)
+{
+    if (destConnId.Length > ConnectionId.MaxLength || srcConnId.Length > ConnectionId.MaxLength)
+        throw new ArgumentException("Connection ID too long");
 
-        // Calculate packet number length
-        int pnLength = GetPacketNumberLength(packetNumber);
+    int pnLength = GetPacketNumberLength(packetNumber);
 
-        // First byte: long header (1) + fixed bit (1) + Handshake type (10) + reserved (00) + packet number length
-        // RFC 9000: Header Form (1) | Fixed Bit (1) | Long Packet Type (2) | Type-Specific Bits (2) | Packet Number Length (2)
-        byte firstByte = (byte)(0x80 | 0x40 | (0x02 << 4) | ((pnLength - 1) & 0x03));
-        WriteByte(firstByte);
+    int headerLen = 1 + 4 + 1 + destConnId.Length + 1 + srcConnId.Length;
+    int payloadLenBytes = PacketProcessor.GetVariableLengthSize(pnLength + payloadLength);
+    int totalLen = headerLen + payloadLenBytes;
 
-        // Version
-        WriteUInt32(version);
+    if (_position + totalLen > _buffer.Length)
+        throw new InvalidOperationException("Buffer overflow");
 
-        // Destination Connection ID
-        WriteByte((byte)destConnId.Length);
-        WriteBytes(destConnId);
+    var span = _buffer.Slice(_position, totalLen);
+    int offset = 0;
 
-        // Source Connection ID
-        WriteByte((byte)srcConnId.Length);
-        WriteBytes(srcConnId);
+    span[offset++] = (byte)(0x80 | 0x40 | (0x02 << 4) | ((pnLength - 1) & 0x03));
+    BinaryPrimitives.WriteUInt32BigEndian(span.Slice(offset, 4), version);
+    offset += 4;
 
-        // Length (includes packet number and payload)
-        WriteVariableLength(pnLength + payloadLength);
-    }
+    span[offset++] = (byte)destConnId.Length;
+    destConnId.CopyTo(span.Slice(offset, destConnId.Length));
+    offset += destConnId.Length;
+
+    span[offset++] = (byte)srcConnId.Length;
+    srcConnId.CopyTo(span.Slice(offset, srcConnId.Length));
+    offset += srcConnId.Length;
+
+    PacketProcessor.EncodeVariableLength(pnLength + payloadLength, span.Slice(offset), out int payloadLenWritten);
+    offset += payloadLenWritten;
+
+    _position += totalLen;
+}
 
     /// <summary>
     /// Writes a short header (1-RTT) packet
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void WriteShortHeaderPacket(
-        ReadOnlySpan<byte> destConnId,
-        long packetNumber,
-        byte keyPhase = 0)
-    {
-        if (destConnId.Length > ConnectionId.MaxLength)
-            throw new ArgumentException("Connection ID too long");
+public void WriteShortHeaderPacket(
+    ReadOnlySpan<byte> destConnId,
+    long packetNumber,
+    byte keyPhase = 0)
+{
+    if (destConnId.Length > ConnectionId.MaxLength)
+        throw new ArgumentException("Connection ID too long");
 
-        // Calculate packet number length
-        int pnLength = GetPacketNumberLength(packetNumber);
+    int pnLength = GetPacketNumberLength(packetNumber);
 
-        // First byte: short header (0) + fixed bit (1) + spin bit (0) + reserved (00) + key phase + packet number length
-        byte firstByte = (byte)(0x40 | ((keyPhase & 0x01) << 2) | ((pnLength - 1) & 0x03));
-        WriteByte(firstByte);
+    int totalLen = 1 + destConnId.Length;
+    if (_position + totalLen > _buffer.Length)
+        throw new InvalidOperationException("Buffer overflow");
 
-        // Destination Connection ID
-        WriteBytes(destConnId);
+    var span = _buffer.Slice(_position, totalLen);
+    int offset = 0;
 
-        // Packet number will be written after this
-    }
+    span[offset++] = (byte)(0x40 | ((keyPhase & 0x01) << 2) | ((pnLength - 1) & 0x03));
+    destConnId.CopyTo(span.Slice(offset, destConnId.Length));
+    offset += destConnId.Length;
+
+    _position += totalLen;
+    // Packet number will be written after this
+}
 
     /// <summary>
     /// Writes a Retry packet
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void WriteRetryPacket(
-        ReadOnlySpan<byte> destConnId,
-        ReadOnlySpan<byte> srcConnId,
-        ReadOnlySpan<byte> originalDestConnId,
-        uint version,
-        ReadOnlySpan<byte> retryToken,
-        ReadOnlySpan<byte> retryIntegrityTag = default)
+public void WriteRetryPacket(
+    ReadOnlySpan<byte> destConnId,
+    ReadOnlySpan<byte> srcConnId,
+    ReadOnlySpan<byte> originalDestConnId,
+    uint version,
+    ReadOnlySpan<byte> retryToken,
+    ReadOnlySpan<byte> retryIntegrityTag = default)
+{
+    if (destConnId.Length > ConnectionId.MaxLength || srcConnId.Length > ConnectionId.MaxLength)
+        throw new ArgumentException("Connection ID too long");
+
+    int headerLen = 1 + 4 + 1 + destConnId.Length + 1 + srcConnId.Length + retryToken.Length + retryIntegrityTag.Length;
+    if (_position + headerLen > _buffer.Length)
+        throw new InvalidOperationException("Buffer overflow");
+
+    var span = _buffer.Slice(_position, headerLen);
+    int offset = 0;
+
+    span[offset++] = (byte)(0x80 | 0x40 | (0x03 << 4));
+    BinaryPrimitives.WriteUInt32BigEndian(span.Slice(offset, 4), version);
+    offset += 4;
+
+    span[offset++] = (byte)destConnId.Length;
+    destConnId.CopyTo(span.Slice(offset, destConnId.Length));
+    offset += destConnId.Length;
+
+    span[offset++] = (byte)srcConnId.Length;
+    srcConnId.CopyTo(span.Slice(offset, srcConnId.Length));
+    offset += srcConnId.Length;
+
+    if (retryToken.Length > 0)
     {
-        if (destConnId.Length > ConnectionId.MaxLength || srcConnId.Length > ConnectionId.MaxLength)
-            throw new ArgumentException("Connection ID too long");
-
-        // First byte: long header (1) + fixed bit (1) + Retry type (11) + unused (0000)
-        // RFC 9000: Header Form (1) | Fixed Bit (1) | Long Packet Type (2) | Unused (4)
-        byte firstByte = (byte)(0x80 | 0x40 | (0x03 << 4));
-        WriteByte(firstByte);
-
-        // Version
-        WriteUInt32(version);
-
-        // Destination Connection ID (client's source connection ID)
-        WriteByte((byte)destConnId.Length);
-        WriteBytes(destConnId);
-
-        // Source Connection ID (server's new connection ID)
-        WriteByte((byte)srcConnId.Length);
-        WriteBytes(srcConnId);
-
-        // Retry Token
-        WriteBytes(retryToken);
-
-        // Retry Integrity Tag (if provided)
-        if (!retryIntegrityTag.IsEmpty)
-        {
-            WriteBytes(retryIntegrityTag);
-        }
+        retryToken.CopyTo(span.Slice(offset, retryToken.Length));
+        offset += retryToken.Length;
     }
+
+    if (retryIntegrityTag.Length > 0)
+    {
+        retryIntegrityTag.CopyTo(span.Slice(offset, retryIntegrityTag.Length));
+        offset += retryIntegrityTag.Length;
+    }
+
+    _position += headerLen;
+}
 
     /// <summary>
     /// Writes packet number with specified length
@@ -195,20 +223,40 @@ public ref struct QuicPacketWriter
     {
         switch (length)
         {
-            case 1:
-                WriteByte((byte)packetNumber);
-                break;
-            case 2:
-                WriteUInt16((ushort)packetNumber);
-                break;
-            case 3:
-                WriteByte((byte)(packetNumber >> 16));
-                WriteByte((byte)(packetNumber >> 8));
-                WriteByte((byte)packetNumber);
-                break;
-            case 4:
-                WriteUInt32((uint)packetNumber);
-                break;
+case 1:
+    {
+        Span<byte> span = _buffer.Slice(_position, 1);
+        span[0] = (byte)packetNumber;
+        _position += 1;
+    }
+    break;
+case 2:
+    {
+        Span<byte> span = _buffer.Slice(_position, 2);
+        span[0] = (byte)(packetNumber >> 8);
+        span[1] = (byte)packetNumber;
+        _position += 2;
+    }
+    break;
+case 3:
+    {
+        Span<byte> span = _buffer.Slice(_position, 3);
+        span[0] = (byte)(packetNumber >> 16);
+        span[1] = (byte)(packetNumber >> 8);
+        span[2] = (byte)packetNumber;
+        _position += 3;
+    }
+    break;
+case 4:
+    {
+        Span<byte> span = _buffer.Slice(_position, 4);
+        span[0] = (byte)(packetNumber >> 24);
+        span[1] = (byte)(packetNumber >> 16);
+        span[2] = (byte)(packetNumber >> 8);
+        span[3] = (byte)packetNumber;
+        _position += 4;
+    }
+    break;
             default:
                 throw new ArgumentException("Invalid packet number length");
         }
@@ -230,27 +278,27 @@ public ref struct QuicPacketWriter
     /// Writes a 16-bit unsigned integer in big-endian
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private void WriteUInt16(ushort value)
-    {
-        if (_position + 2 > _buffer.Length)
-            throw new InvalidOperationException("Buffer overflow");
+private void WriteUInt16(ushort value)
+{
+    if (_position + 2 > _buffer.Length)
+        throw new InvalidOperationException("Buffer overflow");
 
-        BinaryPrimitives.WriteUInt16BigEndian(_buffer.Slice(_position), value);
-        _position += 2;
-    }
+    BinaryPrimitives.WriteUInt16BigEndian(_buffer.Slice(_position), value);
+    _position += 2;
+}
 
     /// <summary>
     /// Writes a 32-bit unsigned integer in big-endian
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private void WriteUInt32(uint value)
-    {
-        if (_position + 4 > _buffer.Length)
-            throw new InvalidOperationException("Buffer overflow");
+private void WriteUInt32(uint value)
+{
+    if (_position + 4 > _buffer.Length)
+        throw new InvalidOperationException("Buffer overflow");
 
-        BinaryPrimitives.WriteUInt32BigEndian(_buffer.Slice(_position), value);
-        _position += 4;
-    }
+    BinaryPrimitives.WriteUInt32BigEndian(_buffer.Slice(_position), value);
+    _position += 4;
+}
 
     /// <summary>
     /// Writes bytes
