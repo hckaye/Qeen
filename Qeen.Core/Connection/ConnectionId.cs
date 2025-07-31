@@ -15,15 +15,14 @@ public readonly struct ConnectionId : IEquatable<ConnectionId>
     /// </summary>
     public const int MaxLength = 20;
 
-    private readonly byte _length;
     private readonly ulong _data1;
     private readonly ulong _data2;
     private readonly uint _data3;
 
     /// <summary>
-    /// Gets the length of the Connection ID in bytes
+    /// Length of the Connection ID in bytes
     /// </summary>
-    public byte Length => _length;
+    public readonly byte Length;
 
     /// <summary>
     /// Gets an empty Connection ID (zero-length)
@@ -38,7 +37,7 @@ public readonly struct ConnectionId : IEquatable<ConnectionId>
         if (data.Length > MaxLength)
             throw new ArgumentException($"Connection ID length cannot exceed {MaxLength} bytes", nameof(data));
 
-        _length = (byte)data.Length;
+        Length = (byte)data.Length;
         _data1 = 0;
         _data2 = 0;
         _data3 = 0;
@@ -76,10 +75,10 @@ public readonly struct ConnectionId : IEquatable<ConnectionId>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public int CopyTo(Span<byte> destination)
     {
-        if (destination.Length < _length)
+        if (destination.Length < Length)
             throw new ArgumentException("Destination span is too small", nameof(destination));
 
-        if (_length > 0)
+        if (Length > 0)
         {
             unsafe
             {
@@ -87,12 +86,12 @@ public readonly struct ConnectionId : IEquatable<ConnectionId>
                 fixed (byte* dst = destination)
                 {
                     byte* src = (byte*)src1;
-                    Buffer.MemoryCopy(src, dst, destination.Length, _length);
+                    Buffer.MemoryCopy(src, dst, destination.Length, Length);
                 }
             }
         }
 
-        return _length;
+        return Length;
     }
 
     /// <summary>
@@ -101,14 +100,14 @@ public readonly struct ConnectionId : IEquatable<ConnectionId>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public ReadOnlySpan<byte> AsSpan()
     {
-        if (_length == 0)
+        if (Length == 0)
             return ReadOnlySpan<byte>.Empty;
 
         unsafe
         {
             fixed (ulong* ptr = &_data1)
             {
-                return new ReadOnlySpan<byte>(ptr, _length);
+                return new ReadOnlySpan<byte>(ptr, Length);
             }
         }
     }
@@ -116,7 +115,7 @@ public readonly struct ConnectionId : IEquatable<ConnectionId>
     /// <summary>
     /// Determines whether this Connection ID is empty (zero-length)
     /// </summary>
-    public bool IsEmpty => _length == 0;
+    public bool IsEmpty => Length == 0;
 
     public override bool Equals(object? obj)
     {
@@ -126,10 +125,10 @@ public readonly struct ConnectionId : IEquatable<ConnectionId>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool Equals(ConnectionId other)
     {
-        if (_length != other._length)
+        if (Length != other.Length)
             return false;
 
-        if (_length == 0)
+        if (Length == 0)
             return true;
 
         return _data1 == other._data1 && 
@@ -139,10 +138,10 @@ public readonly struct ConnectionId : IEquatable<ConnectionId>
 
     public override int GetHashCode()
     {
-        if (_length == 0)
+        if (Length == 0)
             return 0;
 
-        return HashCode.Combine(_length, _data1, _data2, _data3);
+        return HashCode.Combine(Length, _data1, _data2, _data3);
     }
 
     public static bool operator ==(ConnectionId left, ConnectionId right)
@@ -157,7 +156,7 @@ public readonly struct ConnectionId : IEquatable<ConnectionId>
 
     public override string ToString()
     {
-        if (_length == 0)
+        if (Length == 0)
             return "Empty";
 
         return Convert.ToHexString(AsSpan());

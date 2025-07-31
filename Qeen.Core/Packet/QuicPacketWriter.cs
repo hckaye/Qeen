@@ -25,7 +25,7 @@ public ref struct QuicPacketWriter
     /// <summary>
     /// Gets the written bytes
     /// </summary>
-    public readonly ReadOnlySpan<byte> Written => _buffer.Slice(0, _position);
+    public readonly ReadOnlySpan<byte> Written => _buffer[.._position];
 
     /// <summary>
     /// Creates a new QuicPacketWriter

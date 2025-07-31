@@ -12,44 +12,44 @@ public readonly ref struct QuicPacketReader
     private readonly ReadOnlySpan<byte> _buffer;
 
     /// <summary>
-    /// Gets the packet type
+    /// Packet type
     /// </summary>
-    public PacketType Type { get; }
+    public readonly PacketType Type;
 
     /// <summary>
-    /// Gets the header bytes
+    /// Header bytes
     /// </summary>
-    public ReadOnlySpan<byte> Header { get; }
+    public readonly ReadOnlySpan<byte> Header;
 
     /// <summary>
-    /// Gets the payload bytes (may be encrypted)
+    /// Payload bytes (may be encrypted)
     /// </summary>
-    public ReadOnlySpan<byte> Payload { get; }
+    public readonly ReadOnlySpan<byte> Payload;
 
     /// <summary>
-    /// Gets the version (for long header packets)
+    /// Version (for long header packets)
     /// </summary>
-    public uint Version { get; }
+    public readonly uint Version;
 
     /// <summary>
-    /// Gets the destination connection ID
+    /// Destination connection ID
     /// </summary>
-    public ReadOnlySpan<byte> DestinationConnectionId { get; }
+    public readonly ReadOnlySpan<byte> DestinationConnectionId;
 
     /// <summary>
-    /// Gets the source connection ID
+    /// Source connection ID
     /// </summary>
-    public ReadOnlySpan<byte> SourceConnectionId { get; }
+    public readonly ReadOnlySpan<byte> SourceConnectionId;
 
     /// <summary>
-    /// Gets the packet number length (encoded length, not actual value)
+    /// Packet number length (encoded length, not actual value)
     /// </summary>
-    public int PacketNumberLength { get; }
+    public readonly int PacketNumberLength;
 
     /// <summary>
-    /// Gets the token (for Initial packets only)
+    /// Token (for Initial packets only)
     /// </summary>
-    public ReadOnlySpan<byte> Token { get; }
+    public readonly ReadOnlySpan<byte> Token;
 
     private QuicPacketReader(
         ReadOnlySpan<byte> buffer,
