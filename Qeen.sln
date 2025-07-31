@@ -1,0 +1,46 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Qeen.Core", "Qeen.Core\Qeen.Core.csproj", "{ACEEDF18-8668-4E95-9378-5BBE6AF83DA0}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Qeen.Security", "Qeen.Security\Qeen.Security.csproj", "{7405AFC0-E6EC-4928-A699-8ED575B0598E}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Qeen.CongestionControl", "Qeen.CongestionControl\Qeen.CongestionControl.csproj", "{05898A79-37BF-4DBD-9F18-17B53A5493B9}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Qeen.Client", "Qeen.Client\Qeen.Client.csproj", "{4AB8E872-8A13-497A-96B4-372EB008E904}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Qeen.Tests", "Qeen.Tests\Qeen.Tests.csproj", "{07334DF3-9D65-4CA9-9FAB-B54A40092DA2}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{ACEEDF18-8668-4E95-9378-5BBE6AF83DA0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{ACEEDF18-8668-4E95-9378-5BBE6AF83DA0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{ACEEDF18-8668-4E95-9378-5BBE6AF83DA0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{ACEEDF18-8668-4E95-9378-5BBE6AF83DA0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7405AFC0-E6EC-4928-A699-8ED575B0598E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7405AFC0-E6EC-4928-A699-8ED575B0598E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7405AFC0-E6EC-4928-A699-8ED575B0598E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7405AFC0-E6EC-4928-A699-8ED575B0598E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{05898A79-37BF-4DBD-9F18-17B53A5493B9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{05898A79-37BF-4DBD-9F18-17B53A5493B9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{05898A79-37BF-4DBD-9F18-17B53A5493B9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{05898A79-37BF-4DBD-9F18-17B53A5493B9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4AB8E872-8A13-497A-96B4-372EB008E904}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4AB8E872-8A13-497A-96B4-372EB008E904}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4AB8E872-8A13-497A-96B4-372EB008E904}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4AB8E872-8A13-497A-96B4-372EB008E904}.Release|Any CPU.Build.0 = Release|Any CPU
+		{07334DF3-9D65-4CA9-9FAB-B54A40092DA2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{07334DF3-9D65-4CA9-9FAB-B54A40092DA2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{07334DF3-9D65-4CA9-9FAB-B54A40092DA2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{07334DF3-9D65-4CA9-9FAB-B54A40092DA2}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal

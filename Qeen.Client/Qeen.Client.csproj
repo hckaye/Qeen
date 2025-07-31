@@ -1,0 +1,15 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\Qeen.Core\Qeen.Core.csproj" />
+    <ProjectReference Include="..\Qeen.Security\Qeen.Security.csproj" />
+    <ProjectReference Include="..\Qeen.CongestionControl\Qeen.CongestionControl.csproj" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+</Project>
