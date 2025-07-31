@@ -4,7 +4,7 @@
 Qeen is a pure C# implementation of the QUIC protocol.
 
 ## Overview
-- This project aims to implement QUIC according to RFC 9000/9001/9002.
+- This project aims to implement QUIC according to RFC 8999/9000/9001/9002.
 - Written entirely in C#, with no dependencies on external native libraries.
 - Includes both client and server implementations.
 
