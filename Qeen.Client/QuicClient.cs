@@ -106,13 +106,22 @@ public class QuicClient : IQuicClient
             
             await connection.ConnectAsync(remoteEndpoint, cts.Token);
             
-            // TODO: Perform QUIC handshake
-            // This is a simplified implementation - full handshake would include:
-            // 1. Send Initial packet with CRYPTO frames
-            // 2. Process server's Initial and Handshake packets
-            // 3. Send Handshake packet
-            // 4. Process server's 1-RTT packets
-            // 5. Send 1-RTT packets
+            // Perform QUIC handshake
+            var serverName = GetServerNameFromEndpoint(remoteEndpoint);
+            var applicationProtocols = configuration.ApplicationProtocol != null 
+                ? new List<string> { configuration.ApplicationProtocol }
+                : null;
+                
+            var initialPacket = connection.HandshakeManager.StartClientHandshake(serverName, applicationProtocols);
+            
+            // Send Initial packet
+            var packetBuffer = new byte[1500];
+            var packetLength = initialPacket.Encode(packetBuffer);
+            await _socketManager.SendAsync(packetBuffer.AsMemory(0, packetLength), remoteEndpoint, cts.Token);
+            
+            // Wait for handshake completion (simplified)
+            // In a real implementation, this would involve multiple packet exchanges
+            await Task.Delay(100, cts.Token); // Simulate handshake time
             
             return connection;
         }
@@ -187,12 +196,41 @@ public class QuicClient : IQuicClient
         EndPoint remoteEndpoint,
         CancellationToken cancellationToken)
     {
-        // TODO: Parse packet header
-        // TODO: Find associated connection
-        // TODO: Decrypt packet
-        // TODO: Process frames
-        // This is a placeholder for the actual packet processing logic
+        // Try to parse as Initial packet
+        if (Qeen.Core.Packet.InitialPacket.TryDecode(packet.Span, out var initialPacket))
+        {
+            // Find connection by destination connection ID
+            var connection = _connections.Values.FirstOrDefault(c => 
+                c.LocalConnectionId == initialPacket.DestinationConnectionId);
+                
+            if (connection != null && connection.IsClient)
+            {
+                // Process server's Initial packet
+                var handshakePacket = connection.HandshakeManager.ProcessClientInitial(initialPacket);
+                if (handshakePacket != null)
+                {
+                    // Send Handshake packet (simplified)
+                    // In a real implementation, this would be properly encoded
+                    await connection.SendFrameAsync(handshakePacket.Frames.FirstOrDefault(), cancellationToken);
+                }
+            }
+        }
+        
         await Task.CompletedTask;
+    }
+    
+    /// <summary>
+    /// Gets the server name from an endpoint.
+    /// </summary>
+    private static string GetServerNameFromEndpoint(EndPoint endpoint)
+    {
+        if (endpoint is DnsEndPoint dnsEndpoint)
+            return dnsEndpoint.Host;
+            
+        if (endpoint is IPEndPoint ipEndpoint)
+            return ipEndpoint.Address.ToString();
+            
+        return "localhost";
     }
     
     /// <inheritdoc/>

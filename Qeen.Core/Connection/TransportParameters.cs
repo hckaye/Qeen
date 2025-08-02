@@ -88,6 +88,16 @@ public struct TransportParameters
     public ulong MaxDatagramFrameSize { get; set; }
 
     /// <summary>
+    /// Idle timeout in milliseconds
+    /// </summary>
+    public ulong IdleTimeout { get; set; }
+
+    /// <summary>
+    /// Stateless reset token
+    /// </summary>
+    public byte[]? StatelessResetToken { get; set; }
+
+    /// <summary>
     /// Gets default transport parameters
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

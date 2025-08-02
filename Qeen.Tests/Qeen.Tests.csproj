@@ -26,6 +26,7 @@
     <ProjectReference Include="..\Qeen.Security\Qeen.Security.csproj" />
     <ProjectReference Include="..\Qeen.CongestionControl\Qeen.CongestionControl.csproj" />
     <ProjectReference Include="..\Qeen.Client\Qeen.Client.csproj" />
+    <ProjectReference Include="..\Qeen.Server\Qeen.Server.csproj" />
   </ItemGroup>
 
 </Project>

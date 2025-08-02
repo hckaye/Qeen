@@ -3,6 +3,7 @@ using System.Threading.Channels;
 using Qeen.Core.Exceptions;
 using Qeen.Core.Frame;
 using Qeen.Core.Frame.Frames;
+using Qeen.Core.Handshake;
 using Qeen.Core.Packet;
 using Qeen.Core.Stream;
 
@@ -17,11 +18,13 @@ public class QuicConnection : IQuicConnection
     private readonly IFrameProcessor _frameProcessor;
     private readonly Channel<IQuicFrame> _outgoingFrames;
     private readonly SemaphoreSlim _stateLock;
+    private readonly IHandshakeManager _handshakeManager;
     private ConnectionState _state;
     private EndPoint? _remoteEndPoint;
     private TransportParameters? _remoteTransportParameters;
     private ulong _maxData;
     private ulong _dataConsumed;
+    private readonly bool _isClient;
     
     /// <inheritdoc/>
     public ConnectionId LocalConnectionId { get; }
@@ -50,6 +53,7 @@ public class QuicConnection : IQuicConnection
     /// <param name="localTransportParameters">The local transport parameters.</param>
     public QuicConnection(bool isClient, ConnectionId localConnectionId, TransportParameters localTransportParameters)
     {
+        _isClient = isClient;
         LocalConnectionId = localConnectionId;
         LocalTransportParameters = localTransportParameters;
         RemoteConnectionId = ConnectionId.Empty;
@@ -58,6 +62,7 @@ public class QuicConnection : IQuicConnection
         _frameProcessor = new FrameProcessor();
         _outgoingFrames = Channel.CreateUnbounded<IQuicFrame>();
         _stateLock = new SemaphoreSlim(1, 1);
+        _handshakeManager = new HandshakeManager(isClient, localConnectionId, localTransportParameters);
         _maxData = localTransportParameters.InitialMaxData;
     }
     
@@ -192,4 +197,14 @@ public class QuicConnection : IQuicConnection
     {
         await _outgoingFrames.Writer.WriteAsync(frame, cancellationToken);
     }
+    
+    /// <summary>
+    /// Gets the handshake manager.
+    /// </summary>
+    public IHandshakeManager HandshakeManager => _handshakeManager;
+    
+    /// <summary>
+    /// Gets whether this is a client connection.
+    /// </summary>
+    public bool IsClient => _isClient;
 }

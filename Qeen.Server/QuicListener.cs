@@ -107,13 +107,13 @@ public class QuicListener : IQuicListener
     /// <inheritdoc/>
     public void Stop()
     {
-        if (_disposed)
-            return;
-            
         if (!_isListening)
             return;
             
         _isListening = false;
+        
+        if (_disposed)
+            return;
         
         // Cancel receive loop
         _listenCts?.Cancel();
