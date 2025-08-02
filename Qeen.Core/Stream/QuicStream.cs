@@ -1,5 +1,6 @@
 using System.Threading.Channels;
 using Qeen.Core.Exceptions;
+using Qeen.Core.FlowControl;
 
 namespace Qeen.Core.Stream;
 
@@ -10,6 +11,7 @@ public class QuicStream : IQuicStream
 {
     private readonly Channel<StreamData> _receiveChannel;
     private readonly SemaphoreSlim _sendSemaphore;
+    private readonly IStreamFlowController _flowController;
     private StreamState _state;
     private ulong _sendOffset;
     private ulong _receiveOffset;
@@ -42,6 +44,7 @@ public class QuicStream : IQuicStream
         StreamId = streamId;
         Type = type;
         _maxSendData = maxSendData;
+        _flowController = new StreamFlowController(streamId, maxSendData);
         _receiveChannel = Channel.CreateUnbounded<StreamData>();
         _sendSemaphore = new SemaphoreSlim(1, 1);
         
@@ -107,12 +110,23 @@ public class QuicStream : IQuicStream
         await _sendSemaphore.WaitAsync(cancellationToken);
         try
         {
-            if (_sendOffset + (ulong)buffer.Length > _maxSendData)
-                throw new QuicException("Stream data limit exceeded");
+            // RFC 9000 Section 4.1: Enforce stream-level flow control
+            var dataLength = (ulong)buffer.Length;
+            
+            if (!_flowController.CanSend(dataLength))
+            {
+                throw new QuicException(
+                    $"Stream {StreamId} flow control limit exceeded. Available window: {_flowController.AvailableWindow} bytes, " +
+                    $"Attempted to send: {dataLength} bytes",
+                    QuicErrorCode.FlowControlError);
+            }
+            
+            // Record the data being sent
+            _flowController.RecordDataSent(_sendOffset, dataLength);
                 
             // In a real implementation, this would queue the data for transmission
             // For now, we'll just update the offset
-            _sendOffset += (ulong)buffer.Length;
+            _sendOffset += dataLength;
             
             if (fin)
             {
@@ -154,6 +168,10 @@ public class QuicStream : IQuicStream
     {
         if (_state == StreamState.Closed)
             return;
+        
+        // RFC 9000 Section 4.1: Validate incoming data against flow control limits
+        var dataLength = (ulong)data.Length;
+        _flowController.ValidateIncomingData(offset, dataLength);
             
         // In a real implementation, we'd handle out-of-order data
         // For now, assume data arrives in order
@@ -179,7 +197,13 @@ public class QuicStream : IQuicStream
     internal void UpdateFlowControl(ulong maxData)
     {
         _maxSendData = maxData;
+        _flowController.UpdateMaxStreamData(maxData);
     }
+    
+    /// <summary>
+    /// Gets whether the stream is blocked by flow control.
+    /// </summary>
+    public bool IsFlowControlBlocked => _flowController.IsBlocked();
     
     private bool IsLocallyInitiated()
     {

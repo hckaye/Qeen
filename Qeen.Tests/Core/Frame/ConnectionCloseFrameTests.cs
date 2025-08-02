@@ -1,4 +1,5 @@
 using System.Text;
+using Qeen.Core.Constants;
 using Qeen.Core.Frame;
 using Qeen.Core.Frame.Frames;
 using Qeen.Core.Packet;
@@ -23,10 +24,10 @@ public class ConnectionCloseFrameTests
     [Fact]
     public void ConnectionCloseFrame_Constructor_TransportError()
     {
-        var frame = new ConnectionCloseFrame(0x456, 0x01, "Frame error");
+        var frame = new ConnectionCloseFrame(0x03, 0x01, "Frame error"); // 0x03 = FLOW_CONTROL_ERROR
         
         Assert.False(frame.IsApplicationClose);
-        Assert.Equal(0x456u, frame.ErrorCode);
+        Assert.Equal(0x03u, frame.ErrorCode);
         Assert.Equal(0x01u, frame.FrameType);
         Assert.Equal("Frame error", frame.ReasonPhrase);
         Assert.Equal(FrameType.ConnectionCloseQuic, frame.Type);
@@ -119,5 +120,78 @@ public class ConnectionCloseFrameTests
         Assert.Equal(0x456u, frame.ErrorCode);
         Assert.Equal(0x02u, frame.FrameType);
         Assert.Equal("Error", frame.ReasonPhrase);
+    }
+    
+    [Fact]
+    public void ConnectionCloseFrame_Constructor_InvalidTransportErrorCode_Throws()
+    {
+        // Invalid transport error code (0x20 is beyond the valid range)
+        Assert.Throws<ArgumentOutOfRangeException>(() => 
+            new ConnectionCloseFrame(0x20, 0x01, "Invalid"));
+        
+        // Valid crypto error code should work
+        var cryptoFrame = new ConnectionCloseFrame(0x0150, 0x01, "Crypto error");
+        Assert.Equal(0x0150u, cryptoFrame.ErrorCode);
+    }
+    
+    [Fact]
+    public void ConnectionCloseFrame_Constructor_ReasonPhraseTooLong_Throws()
+    {
+        // Create a reason phrase that exceeds the maximum length
+        var longReason = new string('a', QuicLimits.MaxReasonPhraseLength + 1);
+        
+        // Should throw for application close
+        Assert.Throws<ArgumentException>(() => 
+            new ConnectionCloseFrame(0x123, longReason));
+        
+        // Should throw for transport close
+        Assert.Throws<ArgumentException>(() => 
+            new ConnectionCloseFrame(0x03, 0x01, longReason));
+    }
+    
+    [Fact]
+    public void ConnectionCloseFrame_Constructor_MaxReasonPhraseLength_Succeeds()
+    {
+        // Create a reason phrase at exactly the maximum length
+        var maxReason = new string('a', QuicLimits.MaxReasonPhraseLength);
+        
+        // Should succeed for application close
+        var appFrame = new ConnectionCloseFrame(0x123, maxReason);
+        Assert.Equal(maxReason, appFrame.ReasonPhrase);
+        
+        // Should succeed for transport close
+        var transportFrame = new ConnectionCloseFrame(0x03, 0x01, maxReason);
+        Assert.Equal(maxReason, transportFrame.ReasonPhrase);
+    }
+    
+    [Fact]
+    public void ConnectionCloseFrame_Constructor_InvalidFrameType_Throws()
+    {
+        // Frame type exceeds maximum
+        Assert.Throws<ArgumentOutOfRangeException>(() => 
+            new ConnectionCloseFrame(0x03, ulong.MaxValue, "Error"));
+    }
+    
+    [Fact]
+    public void ConnectionCloseFrame_Constructor_InvalidApplicationErrorCode_Throws()
+    {
+        // Application error code exceeds maximum variable integer
+        Assert.Throws<ArgumentOutOfRangeException>(() => 
+            new ConnectionCloseFrame(ulong.MaxValue, "Error"));
+    }
+    
+    [Fact]
+    public void ConnectionCloseFrame_TryDecode_ReasonPhraseTooLong_Fails()
+    {
+        var buffer = new byte[2000];
+        var writer = new FrameWriter(buffer);
+        
+        writer.WriteVariableLength(0x123); // Error code
+        writer.WriteVariableLength((ulong)(QuicLimits.MaxReasonPhraseLength + 1)); // Reason length (too long)
+        
+        var reader = new FrameReader(buffer.AsSpan(0, writer.BytesWritten));
+        
+        // Should fail due to reason phrase being too long
+        Assert.False(ConnectionCloseFrame.TryDecode(reader, true, out _));
     }
 }

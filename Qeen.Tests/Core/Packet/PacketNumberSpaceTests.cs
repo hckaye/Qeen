@@ -1,3 +1,4 @@
+using System.Reflection;
 using System.Threading.Tasks;
 using Xunit;
 using Qeen.Core.Packet;
@@ -137,6 +138,37 @@ public class PacketNumberSpaceTests
         Assert.Equal(-1, space.LargestAcked);
         Assert.Equal(-1, space.LargestReceived);
         Assert.Equal(0, space.NextPacketNumber);
+    }
+
+    [Fact]
+    public void GetNextPacketNumber_ThrowsOnOverflow()
+    {
+        var space = new PacketNumberSpace();
+        
+        // Use reflection to set the internal counter near the maximum value
+        var field = typeof(PacketNumberSpace).GetField("_nextPacketNumber", BindingFlags.NonPublic | BindingFlags.Instance);
+        Assert.NotNull(field);
+        
+        const long maxPacketNumber = (1L << 62) - 1;
+        
+        // Test 1: Verify we can return exactly MaxPacketNumber
+        // When _nextPacketNumber = MaxPacketNumber + 1:
+        // - Interlocked.Increment changes it to MaxPacketNumber + 2 and returns MaxPacketNumber + 2
+        // - We subtract 1, returning MaxPacketNumber + 1
+        // But wait, that's already over the limit!
+        
+        // Actually, when _nextPacketNumber = MaxPacketNumber:
+        // - Interlocked.Increment changes it to MaxPacketNumber + 1 and returns MaxPacketNumber + 1
+        // - We subtract 1, returning MaxPacketNumber (exactly at the limit, should be OK)
+        field.SetValueDirect(__makeref(space), maxPacketNumber);
+        var pn = space.GetNextPacketNumber();
+        Assert.Equal(maxPacketNumber, pn);
+        
+        // Now _nextPacketNumber = MaxPacketNumber + 1
+        // The next call should throw
+        var ex = Assert.Throws<InvalidOperationException>(() => space.GetNextPacketNumber());
+        Assert.Contains("Packet number would exceed maximum value", ex.Message);
+        Assert.Contains("AEAD_LIMIT_REACHED", ex.Message);
     }
 
     [Fact]

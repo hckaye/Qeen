@@ -16,8 +16,8 @@ public interface ILossDetector
     /// <summary>
     /// Processes an acknowledgment frame.
     /// </summary>
-    /// <param name="ackFrame">The ACK frame received.</param>
-    /// <param name="ackDelay">The acknowledgment delay.</param>
+    /// <param name="ackFrame">The ACK frame received (with decoded ACK delay in microseconds).</param>
+    /// <param name="ackDelay">The acknowledgment delay as TimeSpan (converted from frame's microseconds).</param>
     void OnAckReceived(AckFrame ackFrame, TimeSpan ackDelay);
     
     /// <summary>

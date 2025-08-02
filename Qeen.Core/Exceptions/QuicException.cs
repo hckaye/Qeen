@@ -6,6 +6,11 @@ namespace Qeen.Core.Exceptions;
 public class QuicException : Exception
 {
     /// <summary>
+    /// Gets the QUIC error code if applicable.
+    /// </summary>
+    public QuicErrorCode? ErrorCode { get; }
+    
+    /// <summary>
     /// Creates a new QuicException
     /// </summary>
     public QuicException() : base()
@@ -18,6 +23,14 @@ public class QuicException : Exception
     public QuicException(string message) : base(message)
     {
     }
+    
+    /// <summary>
+    /// Creates a new QuicException with a message and error code
+    /// </summary>
+    public QuicException(string message, QuicErrorCode errorCode) : base(message)
+    {
+        ErrorCode = errorCode;
+    }
 
     /// <summary>
     /// Creates a new QuicException with a message and inner exception
@@ -25,6 +38,31 @@ public class QuicException : Exception
     public QuicException(string message, Exception innerException) : base(message, innerException)
     {
     }
+}
+
+/// <summary>
+/// QUIC error codes combining transport and application errors.
+/// </summary>
+public enum QuicErrorCode : ulong
+{
+    NoError = 0x00,
+    InternalError = 0x01,
+    ConnectionRefused = 0x02,
+    FlowControlError = 0x03,
+    StreamLimitError = 0x04,
+    StreamStateError = 0x05,
+    FinalSizeError = 0x06,
+    FrameEncodingError = 0x07,
+    TransportParameterError = 0x08,
+    ConnectionIdLimitError = 0x09,
+    ProtocolViolation = 0x0a,
+    InvalidToken = 0x0b,
+    ApplicationError = 0x0c,
+    CryptoBufferExceeded = 0x0d,
+    KeyUpdateError = 0x0e,
+    AeadLimitReached = 0x0f,
+    NoViablePath = 0x10,
+    CryptoError = 0x100
 }
 
 /// <summary>

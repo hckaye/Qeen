@@ -1,6 +1,7 @@
 using System.Net;
 using System.Threading.Channels;
 using Qeen.Core.Exceptions;
+using Qeen.Core.FlowControl;
 using Qeen.Core.Frame;
 using Qeen.Core.Frame.Frames;
 using Qeen.Core.Handshake;
@@ -16,6 +17,7 @@ public class QuicConnection : IQuicConnection
 {
     private readonly IStreamManager _streamManager;
     private readonly IFrameProcessor _frameProcessor;
+    private readonly IFlowController _flowController;
     private readonly Channel<IQuicFrame> _outgoingFrames;
     private readonly SemaphoreSlim _stateLock;
     private readonly IHandshakeManager _handshakeManager;
@@ -60,6 +62,7 @@ public class QuicConnection : IQuicConnection
         _state = ConnectionState.Idle;
         _streamManager = new StreamManager(isClient);
         _frameProcessor = new FrameProcessor();
+        _flowController = new FlowController(localTransportParameters.InitialMaxData);
         _outgoingFrames = Channel.CreateUnbounded<IQuicFrame>();
         _stateLock = new SemaphoreSlim(1, 1);
         _handshakeManager = new HandshakeManager(isClient, localConnectionId, localTransportParameters);
@@ -168,7 +171,34 @@ public class QuicConnection : IQuicConnection
     internal void UpdateMaxData(ulong maxData)
     {
         _maxData = maxData;
+        _flowController.UpdateMaxData(maxData);
     }
+    
+    /// <summary>
+    /// Validates incoming data against connection flow control limits.
+    /// </summary>
+    /// <param name="streamId">The stream ID.</param>
+    /// <param name="offset">The offset of the data.</param>
+    /// <param name="dataLength">The length of the data.</param>
+    internal void ValidateConnectionFlowControl(ulong streamId, ulong offset, ulong dataLength)
+    {
+        // RFC 9000 Section 4.1: Connection-level flow control applies to all stream data
+        _flowController.ValidateIncomingData(offset, dataLength);
+    }
+    
+    /// <summary>
+    /// Records data sent on the connection.
+    /// </summary>
+    /// <param name="dataLength">The length of data sent.</param>
+    internal void RecordDataSent(ulong dataLength)
+    {
+        _flowController.RecordDataSent(dataLength);
+    }
+    
+    /// <summary>
+    /// Gets whether the connection is blocked by flow control.
+    /// </summary>
+    public bool IsFlowControlBlocked => _flowController.IsBlocked();
     
     /// <summary>
     /// Gets the next frame to send.

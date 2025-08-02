@@ -20,7 +20,7 @@ public sealed class PacketProtector
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public int ProtectPacket(EncryptionLevel level, ReadOnlySpan<byte> plaintext, ReadOnlySpan<byte> associatedData, 
-        Span<byte> output, int headerLength)
+        Span<byte> output, int headerLength, ulong packetNumber)
     {
         if (!_packetProtections.TryGetValue(level, out var packetProtection))
         {
@@ -32,8 +32,8 @@ public sealed class PacketProtector
             throw new InvalidOperationException($"No header protection available for encryption level {level}");
         }
         
-        // Apply packet protection (AEAD encryption)
-        var encryptedLength = packetProtection.Encrypt(plaintext, associatedData, output[headerLength..]);
+        // Apply packet protection (AEAD encryption) with packet number for nonce construction
+        var encryptedLength = packetProtection.Encrypt(plaintext, associatedData, output[headerLength..], packetNumber);
         var totalLength = headerLength + encryptedLength;
         
         // Apply header protection
@@ -44,7 +44,7 @@ public sealed class PacketProtector
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool UnprotectPacket(EncryptionLevel level, Span<byte> packet, int headerLength, 
-        ReadOnlySpan<byte> associatedData, Span<byte> plaintext)
+        ReadOnlySpan<byte> associatedData, Span<byte> plaintext, ulong packetNumber)
     {
         if (!_headerProtections.TryGetValue(level, out var headerProtection))
         {
@@ -59,9 +59,9 @@ public sealed class PacketProtector
         // Remove header protection
         headerProtection.Remove(packet, headerLength);
         
-        // Remove packet protection (AEAD decryption)
+        // Remove packet protection (AEAD decryption) with packet number for nonce construction
         var ciphertext = packet[headerLength..];
-        return packetProtection.TryDecrypt(ciphertext, associatedData, plaintext);
+        return packetProtection.TryDecrypt(ciphertext, associatedData, plaintext, packetNumber);
     }
     
     public void UpdateKeys()
@@ -100,18 +100,19 @@ public sealed class PacketProtector
         
         if (!writeSecret.IsEmpty)
         {
-            var (aesKey, hpKey) = DeriveKeys(writeSecret);
-            _packetProtections[level] = new AesGcmPacketProtection(aesKey);
+            var (aesKey, iv, hpKey) = DeriveKeysAndIv(writeSecret);
+            _packetProtections[level] = new AesGcmPacketProtection(aesKey, iv);
             _headerProtections[level] = new AesEcbHeaderProtection(hpKey);
         }
     }
     
-    private static (byte[] aesKey, byte[] hpKey) DeriveKeys(ReadOnlySpan<byte> secret)
+    private static (byte[] aesKey, byte[] iv, byte[] hpKey) DeriveKeysAndIv(ReadOnlySpan<byte> secret)
     {
-        // Derive AEAD key and header protection key from secret using RFC 9001 labels
+        // RFC 9001 Section 5.1: Derive AEAD key, IV, and header protection key from secret
         var aesKey = Hkdf.ExpandLabel(secret, "quic key", ReadOnlySpan<byte>.Empty, 16);  // 128-bit key for AES-128-GCM
-        var hpKey = Hkdf.ExpandLabel(secret, "quic hp", ReadOnlySpan<byte>.Empty, 16);   // 128-bit key for header protection
+        var iv = Hkdf.ExpandLabel(secret, "quic iv", ReadOnlySpan<byte>.Empty, 12);       // 96-bit IV for AES-GCM
+        var hpKey = Hkdf.ExpandLabel(secret, "quic hp", ReadOnlySpan<byte>.Empty, 16);    // 128-bit key for header protection
         
-        return (aesKey, hpKey);
+        return (aesKey, iv, hpKey);
     }
 }

@@ -1,3 +1,4 @@
+using System.Reflection;
 using Qeen.Core.Stream;
 using Xunit;
 
@@ -165,5 +166,91 @@ public class StreamManagerTests
         Assert.Equal(2, activeStreams.Count);
         Assert.Contains(activeStreams, s => s.StreamId == 0);
         Assert.Contains(activeStreams, s => s.StreamId == 2);
+    }
+    
+    [Fact]
+    public void StreamManager_CreateStream_ThrowsOnStreamIdOverflow_Bidirectional()
+    {
+        var manager = new StreamManager(isClient: true);
+        
+        // Use reflection to set the internal counter near the maximum value
+        var bidirectionalField = typeof(StreamManager).GetField("_nextBidirectionalStreamId", BindingFlags.NonPublic | BindingFlags.Instance);
+        Assert.NotNull(bidirectionalField);
+        
+        // Also need to set the peer max streams to a very high value to avoid the stream limit check
+        var peerMaxField = typeof(StreamManager).GetField("_peerMaxBidirectionalStreams", BindingFlags.NonPublic | BindingFlags.Instance);
+        Assert.NotNull(peerMaxField);
+        
+        const ulong maxStreamId = (1UL << 62) - 1;
+        
+        // Set to a value that is still valid but close to max
+        // Stream IDs increment by 4, so we need to be careful
+        ulong nearMaxStreamId = maxStreamId - 3; // Make it divisible by 4 for client bidirectional
+        nearMaxStreamId = (nearMaxStreamId / 4) * 4; // Round down to nearest valid client bidirectional ID
+        
+        // Calculate the stream count for this ID and set peer max slightly higher
+        var streamCountForNearMax = (nearMaxStreamId >> 2) + 1;
+        peerMaxField.SetValue(manager, streamCountForNearMax + 10); // Allow a bit more
+        
+        bidirectionalField.SetValue(manager, nearMaxStreamId);
+        
+        // This should work (returns nearMaxStreamId)
+        var stream = manager.CreateStream(StreamType.Bidirectional);
+        Assert.Equal(nearMaxStreamId, stream.StreamId);
+        
+        // The next one should fail because nearMaxStreamId + 4 > maxStreamId
+        var ex = Assert.Throws<InvalidOperationException>(() => manager.CreateStream(StreamType.Bidirectional));
+        Assert.Contains("Stream ID would exceed maximum value", ex.Message);
+        Assert.Contains("STREAM_LIMIT_ERROR", ex.Message);
+    }
+    
+    [Fact]
+    public void StreamManager_CreateStream_ThrowsOnStreamIdOverflow_Unidirectional()
+    {
+        var manager = new StreamManager(isClient: true);
+        
+        // Use reflection to set the internal counter near the maximum value
+        var unidirectionalField = typeof(StreamManager).GetField("_nextUnidirectionalStreamId", BindingFlags.NonPublic | BindingFlags.Instance);
+        Assert.NotNull(unidirectionalField);
+        
+        // Also need to set the peer max streams to a very high value to avoid the stream limit check
+        var peerMaxField = typeof(StreamManager).GetField("_peerMaxUnidirectionalStreams", BindingFlags.NonPublic | BindingFlags.Instance);
+        Assert.NotNull(peerMaxField);
+        
+        const ulong maxStreamId = (1UL << 62) - 1;
+        
+        // Set to a value that is still valid but close to max
+        // Client unidirectional starts at 2 and increments by 4
+        ulong nearMaxStreamId = maxStreamId - 1; // Make it 2 mod 4 for client unidirectional
+        nearMaxStreamId = ((nearMaxStreamId - 2) / 4) * 4 + 2; // Round down to nearest valid client unidirectional ID
+        
+        // Calculate the stream count for this ID and set peer max slightly higher
+        var streamCountForNearMax = (nearMaxStreamId >> 2) + 1;
+        peerMaxField.SetValue(manager, streamCountForNearMax + 10); // Allow a bit more
+        
+        unidirectionalField.SetValue(manager, nearMaxStreamId);
+        
+        // This should work (returns nearMaxStreamId)
+        var stream = manager.CreateStream(StreamType.Unidirectional);
+        Assert.Equal(nearMaxStreamId, stream.StreamId);
+        
+        // The next one should fail because nearMaxStreamId + 4 > maxStreamId
+        var ex = Assert.Throws<InvalidOperationException>(() => manager.CreateStream(StreamType.Unidirectional));
+        Assert.Contains("Stream ID would exceed maximum value", ex.Message);
+        Assert.Contains("STREAM_LIMIT_ERROR", ex.Message);
+    }
+    
+    [Fact]
+    public void StreamManager_ProcessIncomingStream_RejectsStreamIdAboveMax()
+    {
+        var manager = new StreamManager(isClient: true);
+        
+        const ulong maxStreamId = (1UL << 62) - 1;
+        ulong invalidStreamId = maxStreamId + 1;
+        
+        // Server-initiated bidirectional stream with invalid ID
+        var ex = Assert.Throws<Qeen.Core.Exceptions.QuicException>(() => 
+            manager.ProcessIncomingStream(invalidStreamId, StreamType.Bidirectional));
+        Assert.Contains("exceeds maximum value", ex.Message);
     }
 }

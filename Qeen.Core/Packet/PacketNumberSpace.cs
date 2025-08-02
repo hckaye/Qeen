@@ -8,6 +8,9 @@ namespace Qeen.Core.Packet;
 /// </summary>
 public struct PacketNumberSpace
 {
+    // RFC 9000 Section 17.1: Maximum packet number is 2^62 - 1
+    private const long MaxPacketNumber = (1L << 62) - 1;
+    
     private long _largestAcked;
     private long _largestReceived;
     private long _nextPacketNumber;
@@ -41,7 +44,20 @@ public struct PacketNumberSpace
     /// Gets the next packet number and increments the counter
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public long GetNextPacketNumber() => Interlocked.Increment(ref _nextPacketNumber) - 1;
+    public long GetNextPacketNumber()
+    {
+        var nextNumber = Interlocked.Increment(ref _nextPacketNumber) - 1;
+        
+        // RFC 9000 Section 17.1: Packet number must not exceed 2^62 - 1
+        if (nextNumber > MaxPacketNumber)
+        {
+            throw new InvalidOperationException(
+                $"Packet number would exceed maximum value of {MaxPacketNumber}. " +
+                "Connection must be closed with AEAD_LIMIT_REACHED error.");
+        }
+        
+        return nextNumber;
+    }
 
     /// <summary>
     /// Updates the largest acknowledged packet number

@@ -126,15 +126,16 @@ public class KeyUpdateTests
         var headerLength = 20;
         
         // Encrypt with original key
+        ulong packetNumber = 12345;
         var length1 = packetProtector.ProtectPacket(
-            EncryptionLevel.OneRtt, plaintext, associatedData, output1, headerLength);
+            EncryptionLevel.OneRtt, plaintext, associatedData, output1, headerLength, packetNumber);
         
         // Act - Update keys
         packetProtector.UpdateKeys();
         
-        // Encrypt with new key
+        // Encrypt with new key (using same packet number to show key difference)
         var length2 = packetProtector.ProtectPacket(
-            EncryptionLevel.OneRtt, plaintext, associatedData, output2, headerLength);
+            EncryptionLevel.OneRtt, plaintext, associatedData, output2, headerLength, packetNumber);
         
         // Assert - Same plaintext encrypted with different keys should produce different ciphertext
         Assert.NotEqual(output1.AsSpan(0, length1).ToArray(), output2.AsSpan(0, length2).ToArray());

@@ -1,4 +1,5 @@
 using System.Text;
+using Qeen.Core.Constants;
 using Qeen.Core.Packet;
 
 namespace Qeen.Core.Frame.Frames;
@@ -35,6 +36,20 @@ public readonly struct ConnectionCloseFrame : IQuicFrame
     /// <param name="reasonPhrase">The reason phrase.</param>
     public ConnectionCloseFrame(ulong errorCode, string reasonPhrase)
     {
+        if (errorCode > QuicLimits.MaxApplicationErrorCode)
+        {
+            throw new ArgumentOutOfRangeException(nameof(errorCode), 
+                $"Application error code must not exceed {QuicLimits.MaxApplicationErrorCode}");
+        }
+        
+        if (!string.IsNullOrEmpty(reasonPhrase) && 
+            Encoding.UTF8.GetByteCount(reasonPhrase) > QuicLimits.MaxReasonPhraseLength)
+        {
+            throw new ArgumentException(
+                $"Reason phrase must not exceed {QuicLimits.MaxReasonPhraseLength} bytes when encoded in UTF-8",
+                nameof(reasonPhrase));
+        }
+        
         IsApplicationClose = true;
         ErrorCode = errorCode;
         FrameType = null;
@@ -49,6 +64,26 @@ public readonly struct ConnectionCloseFrame : IQuicFrame
     /// <param name="reasonPhrase">The reason phrase.</param>
     public ConnectionCloseFrame(ulong errorCode, ulong frameType, string reasonPhrase)
     {
+        if (!QuicLimits.IsValidTransportErrorCode(errorCode))
+        {
+            throw new ArgumentOutOfRangeException(nameof(errorCode), 
+                $"Invalid transport error code: {errorCode:X}. Must be 0x00-0x0f or 0x0100-0x01ff");
+        }
+        
+        if (frameType > QuicLimits.MaxFrameType)
+        {
+            throw new ArgumentOutOfRangeException(nameof(frameType), 
+                $"Frame type must not exceed {QuicLimits.MaxFrameType}");
+        }
+        
+        if (!string.IsNullOrEmpty(reasonPhrase) && 
+            Encoding.UTF8.GetByteCount(reasonPhrase) > QuicLimits.MaxReasonPhraseLength)
+        {
+            throw new ArgumentException(
+                $"Reason phrase must not exceed {QuicLimits.MaxReasonPhraseLength} bytes when encoded in UTF-8",
+                nameof(reasonPhrase));
+        }
+        
         IsApplicationClose = false;
         ErrorCode = errorCode;
         FrameType = frameType;
@@ -104,6 +139,10 @@ public readonly struct ConnectionCloseFrame : IQuicFrame
         }
         
         if (!reader.TryReadVariableLength(out var reasonLength))
+            return false;
+            
+        // Enforce maximum reason phrase length
+        if (reasonLength > QuicLimits.MaxReasonPhraseLength)
             return false;
             
         if (reasonLength > int.MaxValue || reader.BytesRemaining < (int)reasonLength)
