@@ -64,10 +64,12 @@ public readonly struct ConnectionCloseFrame : IQuicFrame
     /// <param name="reasonPhrase">The reason phrase.</param>
     public ConnectionCloseFrame(ulong errorCode, ulong frameType, string reasonPhrase)
     {
-        if (!QuicLimits.IsValidTransportErrorCode(errorCode))
+        // RFC 9000: Accept any valid error code value (62-bit unsigned integer)
+        // Transport errors can use any value, not just the predefined ones
+        if (errorCode > QuicLimits.MaxVarInt)
         {
             throw new ArgumentOutOfRangeException(nameof(errorCode), 
-                $"Invalid transport error code: {errorCode:X}. Must be 0x00-0x0f or 0x0100-0x01ff");
+                $"Error code must not exceed {QuicLimits.MaxVarInt}");
         }
         
         if (frameType > QuicLimits.MaxFrameType)

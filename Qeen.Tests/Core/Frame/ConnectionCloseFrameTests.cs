@@ -123,15 +123,20 @@ public class ConnectionCloseFrameTests
     }
     
     [Fact]
-    public void ConnectionCloseFrame_Constructor_InvalidTransportErrorCode_Throws()
+    public void ConnectionCloseFrame_Constructor_ValidErrorCodes_Succeed()
     {
-        // Invalid transport error code (0x20 is beyond the valid range)
-        Assert.Throws<ArgumentOutOfRangeException>(() => 
-            new ConnectionCloseFrame(0x20, 0x01, "Invalid"));
+        // RFC 9000: Any valid error code should work (up to 62-bit max)
+        // Standard transport error
+        var transportFrame = new ConnectionCloseFrame(0x0a, 0x01, "Protocol violation");
+        Assert.Equal(0x0au, transportFrame.ErrorCode);
         
-        // Valid crypto error code should work
+        // Crypto error code
         var cryptoFrame = new ConnectionCloseFrame(0x0150, 0x01, "Crypto error");
         Assert.Equal(0x0150u, cryptoFrame.ErrorCode);
+        
+        // Custom error code (valid per RFC 9000)
+        var customFrame = new ConnectionCloseFrame(0x456, 0x01, "Custom error");
+        Assert.Equal(0x456u, customFrame.ErrorCode);
     }
     
     [Fact]
@@ -173,11 +178,15 @@ public class ConnectionCloseFrameTests
     }
     
     [Fact]
-    public void ConnectionCloseFrame_Constructor_InvalidApplicationErrorCode_Throws()
+    public void ConnectionCloseFrame_Constructor_InvalidErrorCode_Throws()
     {
-        // Application error code exceeds maximum variable integer
+        // Error code exceeds maximum variable integer (62-bit limit)
         Assert.Throws<ArgumentOutOfRangeException>(() => 
             new ConnectionCloseFrame(ulong.MaxValue, "Error"));
+        
+        // Transport error code exceeds maximum
+        Assert.Throws<ArgumentOutOfRangeException>(() => 
+            new ConnectionCloseFrame(ulong.MaxValue, 0x01, "Error"));
     }
     
     [Fact]
