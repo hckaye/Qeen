@@ -16,14 +16,24 @@ public enum StreamState
     Open,
 
     /// <summary>
+    /// Stream can only receive data (unidirectional receive stream)
+    /// </summary>
+    ReceiveOnly,
+    
+    /// <summary>
+    /// Stream can only send data (unidirectional send stream)
+    /// </summary>
+    SendOnly,
+    
+    /// <summary>
     /// Local side has finished sending (FIN sent)
     /// </summary>
-    LocallyClosed,
+    SendClosed,
 
     /// <summary>
     /// Remote side has finished sending (FIN received)
     /// </summary>
-    RemotelyClosed,
+    ReceiveClosed,
 
     /// <summary>
     /// Both sides have finished sending

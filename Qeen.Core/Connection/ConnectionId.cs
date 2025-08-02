@@ -70,6 +70,14 @@ public readonly struct ConnectionId : IEquatable<ConnectionId>
     }
 
     /// <summary>
+    /// Generates a new random ConnectionId with default length (8 bytes)
+    /// </summary>
+    public static ConnectionId Generate()
+    {
+        return NewRandom(8);
+    }
+
+    /// <summary>
     /// Copies the Connection ID bytes to the specified span
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -110,6 +118,19 @@ public readonly struct ConnectionId : IEquatable<ConnectionId>
                 return new ReadOnlySpan<byte>(ptr, Length);
             }
         }
+    }
+
+    /// <summary>
+    /// Gets the Connection ID as a byte array
+    /// </summary>
+    public byte[] ToArray()
+    {
+        if (Length == 0)
+            return Array.Empty<byte>();
+
+        var array = new byte[Length];
+        CopyTo(array);
+        return array;
     }
 
     /// <summary>

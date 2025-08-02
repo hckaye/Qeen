@@ -13,6 +13,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Qeen.Client", "Qeen.Client\
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Qeen.Tests", "Qeen.Tests\Qeen.Tests.csproj", "{07334DF3-9D65-4CA9-9FAB-B54A40092DA2}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Qeen.Server", "Qeen.Server\Qeen.Server.csproj", "{587DDA1C-A503-4DA7-901E-B2B482AB9D0E}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -42,5 +44,9 @@ Global
 		{07334DF3-9D65-4CA9-9FAB-B54A40092DA2}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{07334DF3-9D65-4CA9-9FAB-B54A40092DA2}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{07334DF3-9D65-4CA9-9FAB-B54A40092DA2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{587DDA1C-A503-4DA7-901E-B2B482AB9D0E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{587DDA1C-A503-4DA7-901E-B2B482AB9D0E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{587DDA1C-A503-4DA7-901E-B2B482AB9D0E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{587DDA1C-A503-4DA7-901E-B2B482AB9D0E}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

@@ -6,9 +6,14 @@ namespace Qeen.Core.Connection;
 public enum ConnectionState
 {
     /// <summary>
-    /// Initial state before handshake begins
+    /// Connection is idle, not yet started
     /// </summary>
-    Initial,
+    Idle,
+
+    /// <summary>
+    /// Connection is in the process of connecting
+    /// </summary>
+    Connecting,
 
     /// <summary>
     /// Handshake in progress
