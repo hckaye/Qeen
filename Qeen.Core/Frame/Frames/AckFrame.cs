@@ -1,4 +1,5 @@
 using Qeen.Core.Constants;
+using Qeen.Core.Ecn;
 using Qeen.Core.Packet;
 
 namespace Qeen.Core.Frame.Frames;
@@ -25,12 +26,18 @@ public readonly struct AckFrame : IQuicFrame
     public IReadOnlyList<AckRange> AckRanges { get; }
     
     /// <summary>
+    /// Gets the ECN counts (optional, only present in ACK_ECN frames).
+    /// </summary>
+    public EcnCounts? EcnCounts { get; }
+    
+    /// <summary>
     /// Initializes a new instance of the <see cref="AckFrame"/> struct.
     /// </summary>
     /// <param name="largestAcknowledged">The largest acknowledged packet number.</param>
     /// <param name="ackDelay">The ACK delay in microseconds.</param>
     /// <param name="ackRanges">The ACK ranges.</param>
-    public AckFrame(ulong largestAcknowledged, ulong ackDelay, IReadOnlyList<AckRange> ackRanges)
+    /// <param name="ecnCounts">Optional ECN counts for ACK_ECN frame.</param>
+    public AckFrame(ulong largestAcknowledged, ulong ackDelay, IReadOnlyList<AckRange> ackRanges, EcnCounts? ecnCounts = null)
     {
         if (ackRanges == null || ackRanges.Count == 0)
             throw new ArgumentException("ACK frame must have at least one range", nameof(ackRanges));
@@ -51,6 +58,7 @@ public readonly struct AckFrame : IQuicFrame
         LargestAcknowledged = largestAcknowledged;
         AckDelay = ackDelay;
         AckRanges = ackRanges;
+        EcnCounts = ecnCounts;
     }
     
     /// <inheritdoc/>

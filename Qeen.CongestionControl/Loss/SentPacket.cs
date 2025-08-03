@@ -1,3 +1,4 @@
+using Qeen.Core.Ecn;
 using Qeen.Core.Frame;
 using Qeen.Core.Packet;
 
@@ -44,6 +45,11 @@ public readonly struct SentPacket
     public IReadOnlyList<IQuicFrame> Frames { get; init; }
     
     /// <summary>
+    /// The ECN codepoint used when sending this packet.
+    /// </summary>
+    public EcnCodepoint EcnCodepoint { get; init; }
+    
+    /// <summary>
     /// Creates a new SentPacket instance.
     /// </summary>
     public SentPacket(
@@ -53,7 +59,8 @@ public readonly struct SentPacket
         bool isAckEliciting,
         bool inFlight,
         EncryptionLevel encryptionLevel,
-        IReadOnlyList<IQuicFrame> frames)
+        IReadOnlyList<IQuicFrame> frames,
+        EcnCodepoint ecnCodepoint = EcnCodepoint.NotEct)
     {
         PacketNumber = packetNumber;
         Size = size;
@@ -62,5 +69,6 @@ public readonly struct SentPacket
         InFlight = inFlight;
         EncryptionLevel = encryptionLevel;
         Frames = frames ?? Array.Empty<IQuicFrame>();
+        EcnCodepoint = ecnCodepoint;
     }
 }

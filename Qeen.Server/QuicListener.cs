@@ -195,34 +195,80 @@ public class QuicListener : IQuicListener
         EndPoint remoteEndpoint,
         CancellationToken cancellationToken)
     {
-        // TODO: Parse packet header to determine packet type and connection ID
-        
-        // For now, this is a simplified implementation
-        // In a real implementation, we would:
-        // 1. Parse the packet header
-        // 2. Check if it's an Initial packet for a new connection
-        // 3. If new connection, validate and create connection
-        // 4. If existing connection, route to that connection
-        // 5. Process the packet (decrypt, parse frames, etc.)
-        
-        // Check if we can accept more connections
-        if (_connections.Count >= _configuration!.MaxConnections)
+        // Parse packet header
+        if (!QuicPacketReader.TryParse(packet.Span, out var packetReader))
         {
-            // Send CONNECTION_CLOSE or ignore
+            // Invalid packet format - ignore
             return;
         }
         
-        // Create a new connection (simplified)
-        var connectionId = ConnectionId.Generate();
-        var transportParams = CreateTransportParameters(_configuration);
-        var connection = new QuicConnection(false, connectionId, transportParams);
-        
-        // Store connection
-        if (_connections.TryAdd(connectionId, connection))
+        // Handle version negotiation if needed
+        if (packetReader.IsVersionNegotiation)
         {
-            // Add to accept queue
-            await _acceptQueue.Writer.WriteAsync(connection, cancellationToken);
+            // Version negotiation packets are sent by servers, not received
+            return;
         }
+        
+        // Get the destination connection ID
+        ConnectionId? connectionId = null;
+        if (!packetReader.DestinationConnectionId.IsEmpty)
+        {
+            connectionId = new ConnectionId(packetReader.DestinationConnectionId.ToArray());
+        }
+        
+        // Check if we have an existing connection for this ID
+        if (connectionId != null && _connections.TryGetValue(connectionId.Value, out var existingConnection))
+        {
+            // Route packet to existing connection
+            // TODO: Pass packet to connection for processing
+            // existingConnection.ProcessPacket(packet, remoteEndpoint);
+            return;
+        }
+        
+        // Check if this is an Initial packet (new connection attempt)
+        if (packetReader.Type == PacketType.Initial)
+        {
+            // Check if we can accept more connections
+            if (_connections.Count >= _configuration!.MaxConnections)
+            {
+                // TODO: Send CONNECTION_CLOSE or ignore
+                return;
+            }
+            
+            // Extract source connection ID for the new connection
+            ConnectionId sourceConnectionId;
+            if (!packetReader.SourceConnectionId.IsEmpty)
+            {
+                sourceConnectionId = new ConnectionId(packetReader.SourceConnectionId.ToArray());
+            }
+            else
+            {
+                // Initial packets must have a source connection ID
+                return;
+            }
+            
+            // Create a new connection
+            var newConnectionId = ConnectionId.Generate();
+            var transportParams = CreateTransportParameters(_configuration);
+            var connection = new QuicConnection(false, newConnectionId, transportParams);
+            
+            // Store connection with the client's source connection ID as the key
+            // (the client will use this as the destination ID in future packets)
+            if (_connections.TryAdd(sourceConnectionId, connection))
+            {
+                // TODO: Process the Initial packet to start handshake
+                // connection.ProcessPacket(packet, remoteEndpoint);
+                
+                // Add to accept queue
+                await _acceptQueue.Writer.WriteAsync(connection, cancellationToken);
+            }
+        }
+        else if (packetReader.Type == PacketType.Retry)
+        {
+            // Servers send Retry packets, they don't receive them
+            return;
+        }
+        // For other packet types without a known connection, ignore
     }
     
     /// <summary>

@@ -17,8 +17,8 @@
 - [x] ACK Rangeやreason phrase長の最大値制限、エラーコード値域チェック等のRFC細則を実装する
 
 ## 5. ロス検出（RFC9002）
-- [ ] ECN（Explicit Congestion Notification）対応を実装する
-- [ ] パス検証（Path Validation）機能を実装する
+- [x] ECN（Explicit Congestion Notification）対応を実装する
+- [x] パス検証（Path Validation）機能を実装する
 
 ## 6. フロー制御（RFC9000 4.1/19.7）
 - [x] MaxDataFrame/MaxStreamDataFrame等を用いた送信上限管理・受信側でのフロー制御ロジックを厳密に実装する
@@ -32,10 +32,10 @@
 - [ ] 最大値超過、wrap-around、異常なパラメータ等のエッジケース・異常系テストを強化する
 
 ### テスト・補助実装の未完了事項
-- [ ] Hkdf/InitialSecrets/ExpandLabel等の実装・テスト（Qeen.Tests/Security/Crypto/HkdfTests.cs, InitialSecretsTests.cs等のTODO参照）
-- [ ] Header Protection（AES/ChaCha20等）の実装・テスト（HeaderProtectionTests.csのTODO参照）
-- [ ] RFC9001ベクトルテスト・パケット暗号化/復号・nonce構築等の実装（Rfc9001VectorTests.csのTODO参照）
-- [ ] サーバー側パケットヘッダー解析処理の実装（QuicListener.csのTODO参照）
+- [x] Hkdf/InitialSecrets/ExpandLabel等の実装・テスト（Qeen.Tests/Security/Crypto/HkdfTests.cs, InitialSecretsTests.cs等のTODO参照）
+- [x] Header Protection（AES/ChaCha20等）の実装・テスト（HeaderProtectionTests.csのTODO参照）
+- [x] RFC9001ベクトルテスト・パケット暗号化/復号・nonce構築等の実装（Rfc9001VectorTests.csのTODO参照）
+- [x] サーバー側パケットヘッダー解析処理の実装（QuicListener.csのTODO参照）
 - [ ] その他、テストコード中の「TODO」コメント箇所の実装
 
 ---

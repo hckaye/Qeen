@@ -1,5 +1,7 @@
 using System;
 using System.Text;
+using Qeen.Security.Crypto;
+using Qeen.Core.Connection;
 using Xunit;
 
 namespace Qeen.Tests.Security.Vectors;
@@ -34,15 +36,11 @@ public class Rfc9001VectorTests
         var connectionId = Convert.FromHexString(ClientInitialConnectionId);
         
         // Act
-        // TODO: Implement the full key derivation chain
-        // var initialSecret = DeriveInitialSecret(connectionId);
-        // var clientSecret = DeriveClientInitialSecret(initialSecret);
+        var initialSecret = InitialSecrets.DeriveInitialSecret(connectionId, QuicVersion.Version1);
+        var clientSecret = InitialSecrets.DeriveClientInitialSecret(initialSecret);
         
         // Assert
-        // Assert.Equal(ClientInitialSecret, Convert.ToHexString(clientSecret).ToLower());
-        
-        // Placeholder
-        Assert.True(true, "Test placeholder - implement client initial secret derivation");
+        Assert.Equal(ClientInitialSecret, Convert.ToHexString(clientSecret).ToLower());
     }
     
     [Fact]
@@ -52,16 +50,12 @@ public class Rfc9001VectorTests
         var clientSecret = Convert.FromHexString(ClientInitialSecret);
         
         // Act
-        // TODO: Derive key and IV using HKDF-Expand-Label
-        // var key = HkdfExpandLabel(clientSecret, "quic key", 16); // AES-128
-        // var iv = HkdfExpandLabel(clientSecret, "quic iv", 12);
+        var key = InitialSecrets.DeriveKey(clientSecret);
+        var iv = InitialSecrets.DeriveIv(clientSecret);
         
         // Assert
-        // Assert.Equal(ClientKey, Convert.ToHexString(key).ToLower());
-        // Assert.Equal(ClientIv, Convert.ToHexString(iv).ToLower());
-        
-        // Placeholder
-        Assert.True(true, "Test placeholder - implement key/IV derivation");
+        Assert.Equal(ClientKey, Convert.ToHexString(key).ToLower());
+        Assert.Equal(ClientIv, Convert.ToHexString(iv).ToLower());
     }
     
     [Fact]
@@ -71,14 +65,10 @@ public class Rfc9001VectorTests
         var clientSecret = Convert.FromHexString(ClientInitialSecret);
         
         // Act
-        // TODO: Derive header protection key
-        // var hpKey = HkdfExpandLabel(clientSecret, "quic hp", 16);
+        var hpKey = InitialSecrets.DeriveHpKey(clientSecret);
         
         // Assert
-        // Assert.Equal(ClientHp, Convert.ToHexString(hpKey).ToLower());
-        
-        // Placeholder
-        Assert.True(true, "Test placeholder - implement HP key derivation");
+        Assert.Equal(ClientHp, Convert.ToHexString(hpKey).ToLower());
     }
     
     [Fact]
@@ -88,18 +78,14 @@ public class Rfc9001VectorTests
         var serverSecret = Convert.FromHexString(ServerInitialSecret);
         
         // Act
-        // TODO: Derive server keys
-        // var key = HkdfExpandLabel(serverSecret, "quic key", 16);
-        // var iv = HkdfExpandLabel(serverSecret, "quic iv", 12);
-        // var hp = HkdfExpandLabel(serverSecret, "quic hp", 16);
+        var key = InitialSecrets.DeriveKey(serverSecret);
+        var iv = InitialSecrets.DeriveIv(serverSecret);
+        var hp = InitialSecrets.DeriveHpKey(serverSecret);
         
         // Assert
-        // Assert.Equal(ServerKey, Convert.ToHexString(key).ToLower());
-        // Assert.Equal(ServerIv, Convert.ToHexString(iv).ToLower());
-        // Assert.Equal(ServerHp, Convert.ToHexString(hp).ToLower());
-        
-        // Placeholder
-        Assert.True(true, "Test placeholder - implement server key derivation");
+        Assert.Equal(ServerKey, Convert.ToHexString(key).ToLower());
+        Assert.Equal(ServerIv, Convert.ToHexString(iv).ToLower());
+        Assert.Equal(ServerHp, Convert.ToHexString(hp).ToLower());
     }
     
     [Fact]

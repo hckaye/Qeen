@@ -1,5 +1,7 @@
 using System;
 using System.Linq;
+using Qeen.Core.Connection;
+using Qeen.Security.Crypto;
 using Xunit;
 
 namespace Qeen.Tests.Security.Crypto;
@@ -29,14 +31,10 @@ public class InitialSecretsTests
         var salt = InitialSaltV1;
         
         // Act
-        // TODO: Implement InitialSecrets.DeriveInitialSecret method
-        // var initialSecret = InitialSecrets.DeriveInitialSecret(connectionId, salt);
+        var initialSecret = InitialSecrets.DeriveInitialSecret(connectionId, salt);
         
         // Assert
-        // Assert.Equal(ExpectedInitialSecret, initialSecret);
-        
-        // Placeholder assertion until implementation
-        Assert.True(true, "Test placeholder - implement InitialSecrets.DeriveInitialSecret");
+        Assert.Equal(ExpectedInitialSecret, initialSecret);
     }
     
     [Fact]
@@ -46,15 +44,10 @@ public class InitialSecretsTests
         var initialSecret = ExpectedInitialSecret;
         
         // Act
-        // TODO: Implement InitialSecrets.DeriveClientInitialSecret method
-        // Uses HKDF-Expand-Label with label "client in"
-        // var clientSecret = InitialSecrets.DeriveClientInitialSecret(initialSecret);
+        var clientSecret = InitialSecrets.DeriveClientInitialSecret(initialSecret);
         
         // Assert
-        // Assert.Equal(ExpectedClientInitialSecret, clientSecret);
-        
-        // Placeholder assertion
-        Assert.True(true, "Test placeholder - implement client secret derivation");
+        Assert.Equal(ExpectedClientInitialSecret, clientSecret);
     }
     
     [Fact]
@@ -64,24 +57,19 @@ public class InitialSecretsTests
         var initialSecret = ExpectedInitialSecret;
         
         // Act
-        // TODO: Implement InitialSecrets.DeriveServerInitialSecret method
-        // Uses HKDF-Expand-Label with label "server in"
-        // var serverSecret = InitialSecrets.DeriveServerInitialSecret(initialSecret);
+        var serverSecret = InitialSecrets.DeriveServerInitialSecret(initialSecret);
         
         // Assert
-        // Assert.Equal(ExpectedServerInitialSecret, serverSecret);
-        
-        // Placeholder assertion
-        Assert.True(true, "Test placeholder - implement server secret derivation");
+        Assert.Equal(ExpectedServerInitialSecret, serverSecret);
     }
     
     [Theory]
-    [InlineData("fc4a147a7ee970291b8f1c032d2c40f9", "client", "key")] // Client AEAD key
-    [InlineData("1e6a5ddb7c1d1aa7a0fd7005", "client", "iv")] // Client AEAD IV
-    [InlineData("431d2282b47bb93febd2cf198521e2be", "client", "hp")] // Client HP key
-    [InlineData("60c02fa6121eb1aba4351f2a63b0acf8", "server", "key")] // Server AEAD key
-    [InlineData("380df3c0f28d9407765c55a1", "server", "iv")] // Server AEAD IV
-    [InlineData("92e867b120b13f409c1aa8ef54305351", "server", "hp")] // Server HP key
+    [InlineData("1f369613dd76d5467730efcbe3b1a22d", "client", "key")] // Client AEAD key
+    [InlineData("fa044b2f42a3fd3b46fb255c", "client", "iv")] // Client AEAD IV
+    [InlineData("9f50449e04a0e810283a1e9933adedd2", "client", "hp")] // Client HP key
+    [InlineData("cf3a5331653c364c88f0f379b6067e37", "server", "key")] // Server AEAD key
+    [InlineData("0ac1493ca1905853b0bba03e", "server", "iv")] // Server AEAD IV
+    [InlineData("c206b8d9b9f0f37644430b490eeaa314", "server", "hp")] // Server HP key
     public void DeriveKeyMaterial_WithQuicWgTestVectors_ReturnsExpectedValues(
         string expectedHex, string side, string label)
     {
@@ -91,14 +79,11 @@ public class InitialSecretsTests
         var fullLabel = $"quic {label}";
         
         // Act
-        // TODO: Implement HKDF-Expand-Label for key material derivation
-        // var derived = HkdfExpandLabel(secret, fullLabel, length);
+        var length = expected.Length;
+        var derived = InitialSecrets.DeriveKeyMaterial(secret, fullLabel, length);
         
         // Assert
-        // Assert.Equal(expected, derived);
-        
-        // Placeholder assertion
-        Assert.True(true, $"Test placeholder - implement {fullLabel} derivation");
+        Assert.Equal(expected, derived);
     }
     
     [Fact]
@@ -108,12 +93,8 @@ public class InitialSecretsTests
         var emptyConnectionId = Array.Empty<byte>();
         
         // Act & Assert
-        // TODO: Implement and verify error handling
-        // Assert.Throws<ArgumentException>(() => 
-        //     InitialSecrets.DeriveInitialSecret(emptyConnectionId, InitialSaltV1));
-        
-        // Placeholder assertion
-        Assert.True(true, "Test placeholder - implement empty connection ID validation");
+        Assert.Throws<ArgumentException>(() => 
+            InitialSecrets.DeriveInitialSecret(emptyConnectionId, InitialSaltV1));
     }
     
     [Fact]
@@ -123,15 +104,11 @@ public class InitialSecretsTests
         var connectionId = TestConnectionId;
         
         // Act
-        // TODO: Implement version-specific salt selection
-        // var secretV1 = InitialSecrets.DeriveInitialSecret(connectionId, QuicVersion.V1);
-        // var secretV2 = InitialSecrets.DeriveInitialSecret(connectionId, QuicVersion.V2);
+        var secretV1 = InitialSecrets.DeriveInitialSecret(connectionId, QuicVersion.Version1);
+        var secretV2 = InitialSecrets.DeriveInitialSecret(connectionId, QuicVersion.Version2);
         
         // Assert
-        // Assert.NotEqual(secretV1, secretV2);
-        
-        // Placeholder assertion
-        Assert.True(true, "Test placeholder - implement version-specific derivation");
+        Assert.NotEqual(secretV1, secretV2);
     }
     
     [Fact]
@@ -161,14 +138,10 @@ public class InitialSecretsTests
         new Random(42).NextBytes(connectionId);
         
         // Act
-        // TODO: Test with various connection ID lengths
-        // var secret = InitialSecrets.DeriveInitialSecret(connectionId, InitialSaltV1);
+        var secret = InitialSecrets.DeriveInitialSecret(connectionId, InitialSaltV1);
         
         // Assert
-        // Assert.NotNull(secret);
-        // Assert.Equal(32, secret.Length); // SHA-256 output
-        
-        // Placeholder assertion
-        Assert.True(true, $"Test placeholder - implement derivation with {length}-byte connection ID");
+        Assert.NotNull(secret);
+        Assert.Equal(32, secret.Length); // SHA-256 output
     }
 }

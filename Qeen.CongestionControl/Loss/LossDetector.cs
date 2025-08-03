@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using Qeen.CongestionControl.Ecn;
 using Qeen.Core.Frame.Frames;
 using Qeen.Core.Packet;
 
@@ -23,6 +24,9 @@ public class LossDetector : ILossDetector
     private ulong _bytesAcked;
     private ulong _bytesLost;
     
+    // ECN support
+    private readonly EcnTracker _ecnTracker;
+    
     // RFC 9002 constants
     private const int kPacketThreshold = 3;
     private const double kTimeThreshold = 9.0 / 8.0;
@@ -37,7 +41,13 @@ public class LossDetector : ILossDetector
         _rttMeasurement = RttMeasurement.Default();
         _lastAckElicitingSentTime = DateTime.MinValue;
         _lossTime = DateTime.MaxValue;
+        _ecnTracker = new EcnTracker();
     }
+    
+    /// <summary>
+    /// Gets the ECN tracker for this connection
+    /// </summary>
+    public EcnTracker EcnTracker => _ecnTracker;
     
     /// <inheritdoc/>
     public void OnPacketSent(SentPacket packet)
