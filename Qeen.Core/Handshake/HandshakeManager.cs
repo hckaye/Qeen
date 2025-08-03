@@ -15,7 +15,7 @@ public class HandshakeManager : IHandshakeManager
     private readonly ConnectionId _remoteConnectionId;
     private readonly TransportParameters _localTransportParameters;
     private HandshakeState _state;
-    private string? _negotiatedProtocol;
+    private string? _negotiatedProtocol = null;
     private ulong _nextPacketNumber;
     
     /// <summary>

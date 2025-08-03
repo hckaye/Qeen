@@ -8,14 +8,14 @@ namespace Qeen.Tests.Security.Tls;
 public class KeyUpdateTests
 {
     [Fact]
-    public void UpdateKeys_ChangesApplicationSecrets()
+    public async Task UpdateKeys_ChangesApplicationSecrets()
     {
         // Arrange
         var connectionId = new byte[] { 1, 2, 3, 4, 5, 6, 7, 8 };
         var tlsEngine = new QuicTlsEngine(isClient: true, connectionId);
         
         // Perform handshake to initialize application secrets
-        var handshakeResult = tlsEngine.PerformHandshakeAsync().GetAwaiter().GetResult();
+        var handshakeResult = await tlsEngine.PerformHandshakeAsync();
         Assert.True(handshakeResult.IsComplete);
         
         var originalWriteSecret = tlsEngine.GetWriteSecret(EncryptionLevel.OneRtt).ToArray();
@@ -33,7 +33,7 @@ public class KeyUpdateTests
     }
     
     [Fact]
-    public void UpdateKeys_DoesNotChangeOtherEncryptionLevels()
+    public async Task UpdateKeys_DoesNotChangeOtherEncryptionLevels()
     {
         // Arrange
         var connectionId = new byte[] { 1, 2, 3, 4, 5, 6, 7, 8 };
@@ -44,7 +44,7 @@ public class KeyUpdateTests
         var initialReadSecret = tlsEngine.GetReadSecret(EncryptionLevel.Initial).ToArray();
         
         // Perform handshake
-        var handshakeResult = tlsEngine.PerformHandshakeAsync().GetAwaiter().GetResult();
+        var handshakeResult = await tlsEngine.PerformHandshakeAsync();
         Assert.True(handshakeResult.IsComplete);
         
         var handshakeWriteSecret = tlsEngine.GetWriteSecret(EncryptionLevel.Handshake).ToArray();
@@ -79,14 +79,14 @@ public class KeyUpdateTests
     }
     
     [Fact]
-    public void UpdateKeys_MultipleUpdates_ProducesDifferentKeys()
+    public async Task UpdateKeys_MultipleUpdates_ProducesDifferentKeys()
     {
         // Arrange
         var connectionId = new byte[] { 1, 2, 3, 4, 5, 6, 7, 8 };
         var tlsEngine = new QuicTlsEngine(isClient: true, connectionId);
         
         // Perform handshake
-        var handshakeResult = tlsEngine.PerformHandshakeAsync().GetAwaiter().GetResult();
+        var handshakeResult = await tlsEngine.PerformHandshakeAsync();
         Assert.True(handshakeResult.IsComplete);
         
         var secrets = new List<byte[]>();

@@ -211,7 +211,11 @@ public class QuicClient : IQuicClient
                 {
                     // Send Handshake packet (simplified)
                     // In a real implementation, this would be properly encoded
-                    await connection.SendFrameAsync(handshakePacket.Frames.FirstOrDefault(), cancellationToken);
+                    var frame = handshakePacket.Frames.FirstOrDefault();
+                    if (frame != null)
+                    {
+                        await connection.SendFrameAsync(frame, cancellationToken);
+                    }
                 }
             }
         }

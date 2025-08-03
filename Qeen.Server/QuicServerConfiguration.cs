@@ -93,24 +93,3 @@ public class QuicServerConfiguration
     /// </summary>
     public bool RequireAddressValidation { get; set; } = true;
 }
-
-/// <summary>
-/// Represents a QUIC protocol version.
-/// </summary>
-public enum QuicVersion : uint
-{
-    /// <summary>
-    /// QUIC version 1 (RFC 9000).
-    /// </summary>
-    Version1 = 0x00000001,
-    
-    /// <summary>
-    /// QUIC version 2.
-    /// </summary>
-    Version2 = 0x6b3343cf,
-    
-    /// <summary>
-    /// Version negotiation.
-    /// </summary>
-    VersionNegotiation = 0x00000000,
-}

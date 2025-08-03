@@ -1,5 +1,6 @@
 using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
+using Qeen.Core.Connection;
 using Qeen.Core.Crypto;
 
 namespace Qeen.Security.Tls;
@@ -8,6 +9,7 @@ public sealed class QuicTlsEngine : IQuicTlsEngine
 {
     private readonly bool _isClient;
     private readonly byte[] _connectionId;
+    private readonly TransportParameters _localTransportParams;
     
     private byte[]? _initialSecret;
     private byte[]? _handshakeReadSecret;
@@ -22,10 +24,11 @@ public sealed class QuicTlsEngine : IQuicTlsEngine
     // RFC 9001: Initial salt for QUIC v1
     private static readonly byte[] InitialSaltV1 = Convert.FromHexString("38762cf7f55934b34d179ae6a4c80cadccbb7f0a");
     
-    public QuicTlsEngine(bool isClient, ReadOnlySpan<byte> connectionId)
+    public QuicTlsEngine(bool isClient, ReadOnlySpan<byte> connectionId, TransportParameters? transportParams = null)
     {
         _isClient = isClient;
         _connectionId = connectionId.ToArray();
+        _localTransportParams = transportParams ?? TransportParameters.GetDefault();
         
         // Derive initial secrets
         DeriveInitialSecrets();
@@ -56,8 +59,8 @@ public sealed class QuicTlsEngine : IQuicTlsEngine
             IsComplete = true,
             ApplicationSecret = _applicationWriteSecret,
             HandshakeSecret = _handshakeWriteSecret,
-            InitialSecret = _initialSecret,
-            TransportParameters = GenerateTransportParameters(),
+            InitialSecret = _initialSecret ?? Array.Empty<byte>(),
+            TransportParameters = TransportParametersCodec.Encode(_localTransportParams, !_isClient),
             EarlyDataAccepted = false
         };
     }
@@ -127,10 +130,4 @@ public sealed class QuicTlsEngine : IQuicTlsEngine
         return secret;
     }
     
-    private static byte[] GenerateTransportParameters()
-    {
-        // Simplified transport parameters
-        // In a real implementation, this would encode actual QUIC transport parameters
-        return new byte[] { 0x00, 0x01, 0x02, 0x03 };
-    }
 }

@@ -114,7 +114,7 @@ public class Rfc9001VectorTests
             // ... (abbreviated for clarity)
         };
         var header = Convert.FromHexString(ClientInitialPacketHeader);
-        var packetNumber = 2;
+        // var packetNumber = 2; // Unused in placeholder test
         
         // Act
         // TODO: Implement full packet encryption
@@ -214,8 +214,8 @@ public class Rfc9001VectorTests
         // Assert
         // Assert.Equal(expectedNonce, Convert.ToHexString(nonce).ToLower());
         
-        // Placeholder
-        Assert.True(true, $"Test placeholder - implement nonce construction for PN={packetNumber}");
+        // Placeholder - using expectedNonce parameter for proper test implementation
+        Assert.True(true, $"Test placeholder - implement nonce construction for PN={packetNumber}, expected={expectedNonce}");
     }
     
     [Fact]

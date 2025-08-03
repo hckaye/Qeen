@@ -19,7 +19,7 @@ public class HeaderProtectionTests
         var hpKey = SampleAesKey;
         var sample = new byte[16]; // 16-byte sample for AES
         new Random(42).NextBytes(sample);
-        var firstByte = (byte)0xC3; // Long header with 2-byte packet number
+        // var firstByte = (byte)0xC3; // Long header with 2-byte packet number - unused in placeholder test
         
         // Act
         // TODO: Implement AES-based header protection
@@ -108,8 +108,8 @@ public class HeaderProtectionTests
         // Arrange
         var payload = new byte[100];
         new Random(42).NextBytes(payload);
-        var pnOffset = 20; // Example packet number offset
-        var pnLength = 2;
+        // var pnOffset = 20; // Example packet number offset - unused in placeholder test
+        // var pnLength = 2; // Unused in placeholder test
         
         // Act
         // TODO: Implement sample extraction
@@ -133,7 +133,7 @@ public class HeaderProtectionTests
         // Arrange
         var hpKey = SampleAesKey;
         var sample = new byte[16];
-        var firstByte = (byte)0x40; // Short header
+        // var firstByte = (byte)0x40; // Short header - unused in placeholder test
         
         // Act
         // TODO: Test short header protection
@@ -154,7 +154,7 @@ public class HeaderProtectionTests
         // Arrange
         var hpKey = SampleAesKey;
         var insufficientPayload = new byte[10]; // Too small for sample extraction
-        var pnOffset = 7;
+        // var pnOffset = 7; // Unused in placeholder test
         
         // Act & Assert
         // TODO: Verify error handling

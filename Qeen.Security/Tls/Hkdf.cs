@@ -11,6 +11,7 @@ namespace Qeen.Security.Tls;
 public static class Hkdf
 {
     private const int Sha256HashSize = 32;
+    private const int Sha384HashSize = 48;
     
     /// <summary>
     /// HKDF-Extract(salt, IKM) -> PRK
@@ -22,6 +23,16 @@ public static class Hkdf
             ? new HMACSHA256(salt.ToArray()) 
             : new HMACSHA256(new byte[Sha256HashSize]); // If salt is empty, use zeros
         
+        return hmac.ComputeHash(ikm.ToArray());
+    }
+    
+    /// <summary>
+    /// HKDF-Extract with HashAlgorithmName
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static byte[] Extract(HashAlgorithmName hashAlgorithm, ReadOnlySpan<byte> ikm, ReadOnlySpan<byte> salt)
+    {
+        using var hmac = CreateHmac(hashAlgorithm, salt);
         return hmac.ComputeHash(ikm.ToArray());
     }
     
@@ -61,12 +72,57 @@ public static class Hkdf
     }
     
     /// <summary>
+    /// HKDF-Expand with HashAlgorithmName
+    /// </summary>
+    public static byte[] Expand(HashAlgorithmName hashAlgorithm, ReadOnlySpan<byte> prk, ReadOnlySpan<byte> info, int length)
+    {
+        var hashSize = GetHashSize(hashAlgorithm);
+        if (length > 255 * hashSize)
+        {
+            throw new ArgumentException($"Length too large: {length} > {255 * hashSize}", nameof(length));
+        }
+        
+        var output = new byte[length];
+        var outputSpan = output.AsSpan();
+        var prev = ReadOnlySpan<byte>.Empty;
+        
+        using var hmac = CreateHmac(hashAlgorithm, prk);
+        
+        for (int i = 0; i < length; i += hashSize)
+        {
+            var counter = (byte)((i / hashSize) + 1);
+            var toHash = new byte[prev.Length + info.Length + 1];
+            
+            prev.CopyTo(toHash);
+            info.CopyTo(toHash.AsSpan(prev.Length));
+            toHash[^1] = counter;
+            
+            var hash = hmac.ComputeHash(toHash);
+            var toCopy = Math.Min(hashSize, length - i);
+            hash.AsSpan(0, toCopy).CopyTo(outputSpan[i..]);
+            
+            prev = hash;
+        }
+        
+        return output;
+    }
+    
+    /// <summary>
     /// HKDF-Expand-Label as specified in RFC 8446 Section 7.1
     /// </summary>
     public static byte[] ExpandLabel(ReadOnlySpan<byte> secret, string label, ReadOnlySpan<byte> context, int length)
     {
         var hkdfLabel = BuildHkdfLabel(label, context, length);
         return Expand(secret, hkdfLabel, length);
+    }
+    
+    /// <summary>
+    /// HKDF-Expand-Label with HashAlgorithmName
+    /// </summary>
+    public static byte[] ExpandLabel(HashAlgorithmName hashAlgorithm, ReadOnlySpan<byte> secret, string label, ReadOnlySpan<byte> context, int length)
+    {
+        var hkdfLabel = BuildHkdfLabel(label, context, length);
+        return Expand(hashAlgorithm, secret, hkdfLabel, length);
     }
     
     /// <summary>
@@ -119,5 +175,31 @@ public static class Hkdf
     public static byte[] DeriveSecret(ReadOnlySpan<byte> secret, string label, int length = Sha256HashSize)
     {
         return ExpandLabel(secret, label, ReadOnlySpan<byte>.Empty, length);
+    }
+    
+    private static HMAC CreateHmac(HashAlgorithmName hashAlgorithm, ReadOnlySpan<byte> key)
+    {
+        var keyArray = key.Length > 0 ? key.ToArray() : new byte[GetHashSize(hashAlgorithm)];
+        
+        if (hashAlgorithm == HashAlgorithmName.SHA256)
+            return new HMACSHA256(keyArray);
+        else if (hashAlgorithm == HashAlgorithmName.SHA384)
+            return new HMACSHA384(keyArray);
+        else if (hashAlgorithm == HashAlgorithmName.SHA512)
+            return new HMACSHA512(keyArray);
+        else
+            throw new NotSupportedException($"Hash algorithm {hashAlgorithm} is not supported");
+    }
+    
+    private static int GetHashSize(HashAlgorithmName hashAlgorithm)
+    {
+        if (hashAlgorithm == HashAlgorithmName.SHA256)
+            return 32;
+        else if (hashAlgorithm == HashAlgorithmName.SHA384)
+            return 48;
+        else if (hashAlgorithm == HashAlgorithmName.SHA512)
+            return 64;
+        else
+            throw new NotSupportedException($"Hash algorithm {hashAlgorithm} is not supported");
     }
 }

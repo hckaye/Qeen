@@ -182,4 +182,5 @@ public readonly struct ConnectionId : IEquatable<ConnectionId>
 
         return Convert.ToHexString(AsSpan());
     }
+
 }

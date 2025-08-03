@@ -51,7 +51,7 @@ public class DetailedHeaderProtectionDebugTest
         var expectedMask = Convert.FromHexString("020dbaecf9");
         
         // Expected protected first byte
-        var expectedFirstByte = (byte)0xC0; // Should remain 0xC0 for Initial packet
+        // var expectedFirstByte = (byte)0xC0; // Should remain 0xC0 for Initial packet - not used in current implementation
         
         _output.WriteLine("=== RFC 9001 A.5 Header Protection Debug ===");
         _output.WriteLine($"HP Key: {Convert.ToHexString(hpKey)}");
