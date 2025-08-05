@@ -86,14 +86,14 @@ public class TlsHandshakeEngineTests
     }
 
     [Fact]
-    public void TlsHandshakeEngine_UpdateKeys_GeneratesNewSecrets()
+    public async Task TlsHandshakeEngine_UpdateKeys_GeneratesNewSecrets()
     {
         // Arrange
         var connectionId = new byte[] { 0x0D, 0x0E, 0x0F, 0x10 };
         var engine = new TlsHandshakeEngine(isClient: true, connectionId);
         
         // Perform handshake to establish application secrets
-        var _ = engine.PerformHandshakeAsync().Result;
+        var _ = await engine.PerformHandshakeAsync();
         
         var originalWrite = engine.GetWriteSecret(EncryptionLevel.OneRtt).ToArray();
         var originalRead = engine.GetReadSecret(EncryptionLevel.OneRtt).ToArray();

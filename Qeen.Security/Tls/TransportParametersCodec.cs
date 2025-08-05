@@ -145,8 +145,11 @@ public static class TransportParametersCodec
                     parameters.RetrySourceConnectionId.Value.ToArray());
             }
 
-            // Preferred address (complex structure, skip for now)
-            // TODO: Implement preferred address encoding when needed
+            // Preferred address (complex structure)
+            if (parameters.PreferredAddress.HasValue)
+            {
+                EncodePreferredAddress(writer, parameters.PreferredAddress.Value);
+            }
         }
 
         // Max datagram frame size (0 means not supported)
@@ -268,7 +271,7 @@ public static class TransportParametersCodec
                     break;
 
                 case ParameterId.PreferredAddress:
-                    // TODO: Implement preferred address decoding when needed
+                    parameters.PreferredAddress = DecodePreferredAddress(paramData);
                     break;
 
                 case ParameterId.MaxDatagramFrameSize:
@@ -395,6 +398,95 @@ public static class TransportParametersCodec
         };
     }
 
+    private static void EncodePreferredAddress(BinaryWriter writer, PreferredAddress address)
+    {
+        using var stream = new MemoryStream();
+        using var addrWriter = new BinaryWriter(stream);
+        
+        // IPv4 address (4 bytes) + port (2 bytes)
+        if (address.IPv4Address != null)
+        {
+            var ipv4Bytes = address.IPv4Address.Address.GetAddressBytes();
+            addrWriter.Write(ipv4Bytes);
+            addrWriter.Write((ushort)System.Net.IPAddress.HostToNetworkOrder((short)address.IPv4Address.Port));
+        }
+        else
+        {
+            // Write zeros if no IPv4 address
+            addrWriter.Write(new byte[6]);
+        }
+        
+        // IPv6 address (16 bytes) + port (2 bytes)
+        if (address.IPv6Address != null)
+        {
+            var ipv6Bytes = address.IPv6Address.Address.GetAddressBytes();
+            addrWriter.Write(ipv6Bytes);
+            addrWriter.Write((ushort)System.Net.IPAddress.HostToNetworkOrder((short)address.IPv6Address.Port));
+        }
+        else
+        {
+            // Write zeros if no IPv6 address
+            addrWriter.Write(new byte[18]);
+        }
+        
+        // Connection ID length and value
+        addrWriter.Write((byte)address.ConnectionId.Length);
+        addrWriter.Write(address.ConnectionId.ToArray());
+        
+        // Stateless reset token (16 bytes)
+        addrWriter.Write(address.StatelessResetToken.ToArray());
+        
+        var data = stream.ToArray();
+        WriteParameter(writer, ParameterId.PreferredAddress, data);
+    }
+    
+    private static PreferredAddress DecodePreferredAddress(ReadOnlySpan<byte> data)
+    {
+        if (data.Length < 41) // Minimum size for preferred address
+            throw new ArgumentException("Invalid preferred address data");
+            
+        var address = new PreferredAddress();
+        int offset = 0;
+        
+        // IPv4 address and port
+        var ipv4Bytes = data.Slice(offset, 4).ToArray();
+        offset += 4;
+        var ipv4Port = (ushort)System.Net.IPAddress.NetworkToHostOrder((short)((data[offset] << 8) | data[offset + 1]));
+        offset += 2;
+        
+        if (!ipv4Bytes.All(b => b == 0))
+        {
+            address.IPv4Address = new System.Net.IPEndPoint(new System.Net.IPAddress(ipv4Bytes), ipv4Port);
+        }
+        
+        // IPv6 address and port
+        var ipv6Bytes = data.Slice(offset, 16).ToArray();
+        offset += 16;
+        var ipv6Port = (ushort)System.Net.IPAddress.NetworkToHostOrder((short)((data[offset] << 8) | data[offset + 1]));
+        offset += 2;
+        
+        if (!ipv6Bytes.All(b => b == 0))
+        {
+            address.IPv6Address = new System.Net.IPEndPoint(new System.Net.IPAddress(ipv6Bytes), ipv6Port);
+        }
+        
+        // Connection ID
+        var cidLength = data[offset++];
+        if (offset + cidLength > data.Length)
+            throw new ArgumentException("Invalid connection ID length in preferred address");
+            
+        address.ConnectionId = new ConnectionId(data.Slice(offset, cidLength).ToArray());
+        offset += cidLength;
+        
+        // Stateless reset token
+        if (offset + 16 > data.Length)
+            throw new ArgumentException("Invalid stateless reset token in preferred address");
+            
+        address.StatelessResetToken = data.Slice(offset, 16).ToArray();
+        
+        return address;
+    }
+    
     private static ulong ReadVarIntValue(ReadOnlySpan<byte> data)
     {
         var (value, _) = ReadVarInt(data);

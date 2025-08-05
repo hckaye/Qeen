@@ -25,7 +25,6 @@ public class QuicConnection : IQuicConnection
     private EndPoint? _remoteEndPoint;
     private TransportParameters? _remoteTransportParameters;
     private ulong _maxData;
-    private ulong _dataConsumed;
     private readonly bool _isClient;
     
     /// <inheritdoc/>
@@ -193,6 +192,105 @@ public class QuicConnection : IQuicConnection
     internal void RecordDataSent(ulong dataLength)
     {
         _flowController.RecordDataSent(dataLength);
+    }
+    
+    /// <summary>
+    /// Processes an incoming packet.
+    /// </summary>
+    /// <param name="packet">The packet data.</param>
+    /// <param name="remoteEndpoint">The remote endpoint.</param>
+    public async Task ProcessPacket(ReadOnlyMemory<byte> packet, EndPoint remoteEndpoint)
+    {
+        // Update remote endpoint if not set
+        if (_remoteEndPoint == null)
+        {
+            _remoteEndPoint = remoteEndpoint;
+        }
+        
+        // Parse the packet
+        if (!Packet.QuicPacketReader.TryParse(packet.Span, out var packetReader))
+        {
+            // Invalid packet - ignore
+            return;
+        }
+        
+        // Extract necessary data from ref struct before async calls
+        var packetType = packetReader.Type;
+        var payload = packetReader.Payload.ToArray();
+        
+        // Process based on packet type
+        switch (packetType)
+        {
+            case PacketType.Initial:
+                await ProcessInitialPacket(payload, packet);
+                break;
+            case PacketType.Handshake:
+                await ProcessHandshakePacket(payload, packet);
+                break;
+            case PacketType.OneRtt:
+                await ProcessOneRttPacket(payload, packet);
+                break;
+            case PacketType.ZeroRtt:
+                await ProcessZeroRttPacket(payload, packet);
+                break;
+            default:
+                // Unknown packet type - ignore
+                break;
+        }
+    }
+    
+    private async Task ProcessInitialPacket(byte[] payload, ReadOnlyMemory<byte> packet)
+    {
+        // Process Initial packet (handshake initiation)
+        if (_state == ConnectionState.Idle)
+        {
+            _state = ConnectionState.Handshake;
+            
+            // Start handshake if server
+            if (!_isClient)
+            {
+                // Server processing would use ProcessServerInitial
+                // For now, just mark as processing
+                await Task.CompletedTask;
+            }
+        }
+        
+        // Process frames in the packet payload
+        // Note: Payload is encrypted, would need to decrypt first
+        // For now, we'll just acknowledge receipt
+    }
+    
+    private async Task ProcessHandshakePacket(byte[] payload, ReadOnlyMemory<byte> packet)
+    {
+        // Process Handshake packet
+        if (_state == ConnectionState.Handshake)
+        {
+            // Continue handshake processing
+            // Would use ProcessHandshakePacket in real implementation
+            await Task.CompletedTask;
+        }
+    }
+    
+    private async Task ProcessOneRttPacket(byte[] payload, ReadOnlyMemory<byte> packet)
+    {
+        // Process 1-RTT (application data) packet
+        if (_state == ConnectionState.Connected)
+        {
+            // Process application data frames
+            // Note: Payload is encrypted, would need to decrypt first
+            await Task.CompletedTask;
+        }
+    }
+    
+    private async Task ProcessZeroRttPacket(byte[] payload, ReadOnlyMemory<byte> packet)
+    {
+        // Process 0-RTT (early data) packet
+        if (_state == ConnectionState.Handshake || _state == ConnectionState.Connected)
+        {
+            // Process early data frames
+            // Note: Payload is encrypted, would need to decrypt first
+            await Task.CompletedTask;
+        }
     }
     
     /// <summary>

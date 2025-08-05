@@ -121,8 +121,14 @@ public class InitialSecretsTests
         //     opaque context<0..255> = Context;
         // } HkdfLabel;
         
-        // TODO: Implement HKDF-Expand-Label with proper TLS 1.3 formatting
-        Assert.True(true, "Test placeholder - implement HKDF-Expand-Label formatting");
+        // Test that our implementation correctly derives a known value
+        var secret = Convert.FromHexString("c00cf151ca5be075ed0ebfb5c80323c42d6b7db67881289af4008f1f6c357aea");
+        var key = InitialSecrets.DeriveKey(secret);
+        
+        // The key derivation uses HKDF-Expand-Label internally with "tls13 quic key"
+        // If the formatting is wrong, we wouldn't get the correct RFC test vector
+        var expected = Convert.FromHexString("1f369613dd76d5467730efcbe3b1a22d");
+        Assert.Equal(expected, key);
     }
     
     [Theory]

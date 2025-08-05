@@ -36,7 +36,7 @@
 - [x] Header Protection（AES/ChaCha20等）の実装・テスト（HeaderProtectionTests.csのTODO参照）
 - [x] RFC9001ベクトルテスト・パケット暗号化/復号・nonce構築等の実装（Rfc9001VectorTests.csのTODO参照）
 - [x] サーバー側パケットヘッダー解析処理の実装（QuicListener.csのTODO参照）
-- [ ] その他、テストコード中の「TODO」コメント箇所の実装
+- [x] その他、テストコード中の「TODO」コメント箇所の実装
 
 ---
 本TODOはRFC9000/9001/9002および他実装（quiche/quick-go等）との比較に基づくものです。

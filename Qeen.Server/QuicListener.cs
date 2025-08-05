@@ -4,6 +4,9 @@ using System.Threading.Channels;
 using Qeen.Core.Connection;
 using Qeen.Core.Packet;
 using Qeen.Core.Transport;
+using Qeen.Core.Frame;
+using Qeen.Core.Frame.Frames;
+using Qeen.Core.Exceptions;
 
 namespace Qeen.Server;
 
@@ -220,8 +223,7 @@ public class QuicListener : IQuicListener
         if (connectionId != null && _connections.TryGetValue(connectionId.Value, out var existingConnection))
         {
             // Route packet to existing connection
-            // TODO: Pass packet to connection for processing
-            // existingConnection.ProcessPacket(packet, remoteEndpoint);
+            await existingConnection.ProcessPacket(packet, remoteEndpoint);
             return;
         }
         
@@ -231,7 +233,8 @@ public class QuicListener : IQuicListener
             // Check if we can accept more connections
             if (_connections.Count >= _configuration!.MaxConnections)
             {
-                // TODO: Send CONNECTION_CLOSE or ignore
+                // Send CONNECTION_CLOSE with internal error (ServerBusy not defined yet)
+                await SendConnectionClose(remoteEndpoint, TransportErrorCode.InternalError, "Server at maximum capacity");
                 return;
             }
             
@@ -256,8 +259,8 @@ public class QuicListener : IQuicListener
             // (the client will use this as the destination ID in future packets)
             if (_connections.TryAdd(sourceConnectionId, connection))
             {
-                // TODO: Process the Initial packet to start handshake
-                // connection.ProcessPacket(packet, remoteEndpoint);
+                // Process the Initial packet to start handshake
+                await connection.ProcessPacket(packet, remoteEndpoint);
                 
                 // Add to accept queue
                 await _acceptQueue.Writer.WriteAsync(connection, cancellationToken);
@@ -289,6 +292,27 @@ public class QuicListener : IQuicListener
             ActiveConnectionIdLimit = 8,
             StatelessResetToken = config.StatelessResetToken
         };
+    }
+    
+    /// <summary>
+    /// Sends a CONNECTION_CLOSE frame to a remote endpoint.
+    /// </summary>
+    private async Task SendConnectionClose(EndPoint remoteEndpoint, TransportErrorCode errorCode, string reasonPhrase)
+    {
+        // Create a CONNECTION_CLOSE frame with the error code and reason
+        var frame = new ConnectionCloseFrame((ulong)errorCode, 0, reasonPhrase);
+        
+        // Encode the frame
+        var buffer = new byte[1200]; // Min QUIC packet size
+        var writer = new FrameWriter(buffer);
+        frame.Encode(ref writer);
+        
+        // Create a minimal packet header (simplified - in production would need proper packet construction)
+        // For now, we'll send a raw frame which isn't ideal but serves the purpose
+        // A proper implementation would create a full QUIC packet with header and encryption
+        
+        // Send the frame to the remote endpoint
+        await _socketManager.SendAsync(buffer.AsMemory(0, writer.BytesWritten), remoteEndpoint, CancellationToken.None);
     }
     
     /// <summary>

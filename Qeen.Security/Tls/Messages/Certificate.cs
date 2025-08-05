@@ -92,7 +92,7 @@ public class Certificate : ITlsMessage
         {
             if (entry.CertData.Length > 0)
             {
-                collection.Add(new X509Certificate2(entry.CertData));
+                collection.Add(X509CertificateLoader.LoadCertificate(entry.CertData));
             }
         }
         return collection;

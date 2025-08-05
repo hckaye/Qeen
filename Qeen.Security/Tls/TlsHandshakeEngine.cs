@@ -20,7 +20,6 @@ public class TlsHandshakeEngine : IQuicTlsEngine
     private CipherSuite _selectedCipherSuite;
     private TransportParameters? _peerTransportParams;
     private X509Certificate2? _localCertificate;
-    private X509Certificate2Collection? _peerCertificates;
     private string? _serverName;
     private string? _alpnProtocol;
     

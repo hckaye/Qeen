@@ -16,7 +16,6 @@ public sealed class QuicTlsEngine : IQuicTlsEngine
     private byte[]? _handshakeWriteSecret;
     private byte[]? _applicationReadSecret;
     private byte[]? _applicationWriteSecret;
-    private byte[]? _earlyDataSecret;
     
     private readonly Dictionary<EncryptionLevel, byte[]> _readSecrets = new();
     private readonly Dictionary<EncryptionLevel, byte[]> _writeSecrets = new();

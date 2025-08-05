@@ -27,10 +27,25 @@ public struct AesEcbHeaderProtection : IHeaderProtection
     public unsafe void Apply(Span<byte> packet, int headerLength)
     {
         // RFC 9001: Header protection algorithm
-        // 1. Get the packet number offset and length
-        if (!QuicPacketHeader.TryGetPacketNumberOffset(packet, out var pnOffset, out var pnLength))
+        // Use the provided headerLength as the packet number offset if it's valid
+        int pnOffset;
+        int pnLength;
+        
+        if (headerLength > 0 && headerLength < packet.Length)
         {
-            throw new ArgumentException("Invalid QUIC packet format", nameof(packet));
+            // Use provided header length
+            pnOffset = headerLength;
+            // Determine packet number length from first byte
+            var firstByte = packet[0];
+            pnLength = (firstByte & 0x03) + 1; // Lower 2 bits encode length - 1
+        }
+        else
+        {
+            // Fall back to parsing
+            if (!QuicPacketHeader.TryGetPacketNumberOffset(packet, out pnOffset, out pnLength))
+            {
+                throw new ArgumentException("Invalid QUIC packet format", nameof(packet));
+            }
         }
 
         // 2. Get the sample offset (4 bytes after packet number)
@@ -78,9 +93,14 @@ public struct AesEcbHeaderProtection : IHeaderProtection
         // 1. Determine if it's a long or short header
         var isLongHeader = (packet[0] & 0x80) != 0;
         
-        // 2. Estimate packet number offset (we can't know the exact length yet)
+        // 2. Estimate packet number offset
         int estimatedPnOffset;
-        if (isLongHeader)
+        if (headerLength > 0 && headerLength < packet.Length)
+        {
+            // Use provided header length
+            estimatedPnOffset = headerLength;
+        }
+        else if (isLongHeader)
         {
             if (!TryEstimateLongHeaderPacketNumberOffset(packet, out estimatedPnOffset))
             {

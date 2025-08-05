@@ -73,7 +73,7 @@ public class QuicConnectionException : QuicException
     /// <summary>
     /// Gets the transport error code
     /// </summary>
-    public TransportErrorCode ErrorCode { get; }
+    public new TransportErrorCode ErrorCode { get; }
 
     /// <summary>
     /// Gets the frame type that caused the error (if applicable)
@@ -120,7 +120,7 @@ public class QuicStreamException : QuicException
     /// <summary>
     /// Gets the application error code
     /// </summary>
-    public long ErrorCode { get; }
+    public new long ErrorCode { get; }
 
     /// <summary>
     /// Creates a new QuicStreamException
@@ -141,7 +141,7 @@ public class QuicProtocolViolationException : QuicException
     /// <summary>
     /// Gets the transport error code
     /// </summary>
-    public TransportErrorCode ErrorCode { get; }
+    public new TransportErrorCode ErrorCode { get; }
 
     /// <summary>
     /// Creates a new QuicProtocolViolationException
